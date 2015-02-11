@@ -1,0 +1,23 @@
+#Files to be ignored
+*.pdf
+*.fdb_latexmk
+*.log
+*.aux
+*.bbl
+*.dvi
+*.out
+*.latexmain
+*.thm
+*.synctex.gz
+*.zpid
+*.blg
+*.fls
+*~
+
+*.bat
+*.spyderproject
+*.spyderworkspace
+
+# Folders to be ignored
+/.ipynb_checkpoints/
+/TEMP/
