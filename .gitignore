@@ -17,6 +17,7 @@
 *.bat
 *.spyderproject
 *.spyderworkspace
+*.zip
 
 # Folders to be ignored
 /.ipynb_checkpoints/
