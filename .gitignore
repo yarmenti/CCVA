@@ -18,6 +18,7 @@
 *.spyderproject
 *.spyderworkspace
 *.zip
+*.md
 
 # Folders to be ignored
 /.ipynb_checkpoints/
