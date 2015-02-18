@@ -6,6 +6,7 @@ Created on Thu Jan 15 15:37:27 2015
 """
 
 import numpy as np
+from scipy import interpolate
 
 from .european import EuropeanContract
 
@@ -37,9 +38,15 @@ class SwapContract(EuropeanContract):
         return self._get_St_(t)*num/den
         
     def price(self, t):
+#        print t
+#        print self._pillars_
+        
         fst_payment_idx = np.searchsorted(self._pillars_, t, side='right')
         if fst_payment_idx >= len(self._pillars_):
             return 0.
+
+#        print fst_payment_idx            
+#        raise NotImplementedError()
         
         df_t = self.discount_factor(t)
         
@@ -66,8 +73,29 @@ class SwapContract(EuropeanContract):
         pill = ("{" +', '.join(['%.2f']*len(self.pillars))+"}")%tuple(self.pillars)
         return "Swap contract of maturity T = %d years, over S^%d with strike K = %.3f, paying at %s"%(self.maturity, self._underlying_index_, self.strike, pill)
     
-    def __additional_points_subprocess__(self):
-        return {t: self._get_St_(t) for t in self._pillars_}
+    def __additional_points_subprocess__(self, **kwargs):
+        t = kwargs['t']
+        t_ph = kwargs['t_ph']
+        
+        pill_i = (self._pillars_ <= t_ph)
+        pills = self._pillars_[pill_i]
+        
+        tmp = {t_: self._get_St_(t_) for t_ in pills}
+
+        special_pill_i = (t < self._pillars_) & (self._pillars_ <= t_ph)
+        if special_pill_i.any():
+            special_pills = self._pillars_[special_pill_i]
+                        
+            time = [t, t_ph]
+            
+            current = kwargs['current']
+            S = [current[t], current[t_ph]]
+
+            f = interpolate.interp1d(time, S)  
+            #S_t_ = current[t_ph]
+            tmp.update({t_: f(t_) for t_ in special_pills})
+                
+        return tmp
     
     @classmethod
     def generate_payment_dates(cls, first_date, maturity, step):
