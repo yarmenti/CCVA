@@ -38,15 +38,10 @@ class SwapContract(EuropeanContract):
         return self._get_St_(t)*num/den
         
     def price(self, t):
-#        print t
-#        print self._pillars_
         
         fst_payment_idx = np.searchsorted(self._pillars_, t, side='right')
         if fst_payment_idx >= len(self._pillars_):
             return 0.
-
-#        print fst_payment_idx            
-#        raise NotImplementedError()
         
         df_t = self.discount_factor(t)
         
@@ -92,7 +87,6 @@ class SwapContract(EuropeanContract):
             S = [current[t], current[t_ph]]
 
             f = interpolate.interp1d(time, S)  
-            #S_t_ = current[t_ph]
             tmp.update({t_: f(t_) for t_ in special_pills})
                 
         return tmp
