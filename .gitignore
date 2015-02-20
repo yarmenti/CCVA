@@ -21,7 +21,9 @@
 *.md
 *.pyc
 
+# Folders to be ignored: all the checkpoints in any subdir
+.ipynb_checkpoints/
+
 # Folders to be ignored
-/.ipynb_checkpoints/
 /TEMP/
 /OUTPUTS/

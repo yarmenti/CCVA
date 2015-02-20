@@ -18,6 +18,10 @@ class SwapContract(EuropeanContract):
         self._strike_ = self.compute_strike(dates[0])
 
     @property
+    def delta_time(self):
+        return self._delta_
+
+    @property
     def strike(self):
         return self._strike_
         
@@ -37,8 +41,7 @@ class SwapContract(EuropeanContract):
         
         return self._get_St_(t)*num/den
         
-    def price(self, t):
-        
+    def price(self, t):        
         fst_payment_idx = np.searchsorted(self._pillars_, t, side='right')
         if fst_payment_idx >= len(self._pillars_):
             return 0.
