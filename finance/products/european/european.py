@@ -58,7 +58,7 @@ class EuropeanContract(object):
     def underlying_index(self):
         return self._underlying_index_
         
-    def __additional_points_subprocess__(self):
+    def __additional_points_subprocess__(self, **kwargs):
         return dict()
         
     def compute_brownian_quantile_price(self, t, h, drift_t, vol_t, alpha=0.95, weight=1., df=None):
@@ -74,15 +74,16 @@ class EuropeanContract(object):
         S_th = S_t + drift_t*h + vol_t*np.sqrt(h)*quantile_inv
         
         process_values = {0: 0., t: S_t, t_ph: S_th}
-        process_values.update(self.__additional_points_subprocess__())
+        process_values.update(self.__additional_points_subprocess__(
+            t=t, 
+            t_ph=t_ph,
+            current=process_values
+        ))
         
         def f(x):
-#            print "Called f with x =",x
             res = np.empty(self._underlying_index_ + 1)
             res.fill(process_values[x])
             return res.tolist()
-        
-#        f = lambda x: process_values[x]
 
         tmp_underlying = self._underlying_
         self._underlying_ = DeterministicPath(f, process_values.keys())
