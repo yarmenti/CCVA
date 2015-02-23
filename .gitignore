@@ -22,7 +22,7 @@
 
 # Folders to be ignored: all the checkpoints in any subdir
 .ipynb_checkpoints/
+OUTPUTS/
 
 # Folders to be ignored
 /TEMP/
-/OUTPUTS/

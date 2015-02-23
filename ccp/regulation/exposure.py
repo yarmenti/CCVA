@@ -53,10 +53,6 @@ class EuropeanQuantileBrownianExposure(Exposure):
         conf_level = kwargs.get('conf_level', self._conf_level_)
         df = kwargs.get('conf_level', self._df_)
 
-#        res = np.zeros((len(weights), 1))
-#        for i, w in enumerate(weights):
-#            res[i] = self._contract_.compute_brownian_quantile_price(t, risk_period, self._drift_, self._vol_, conf_level, w[0, 0], df)
-            
         res = self._v_func_(t, risk_period, self._drift_, self._vol_, conf_level, weights, df)
    
         return res
