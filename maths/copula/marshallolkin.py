@@ -10,7 +10,7 @@ from scipy import special
 
 class MarshallOlkinCopula(object):
     
-    def __init__(self, reduced_index, total_number, indices, lambdas):
+    def __init__(self, reduced_index, total_number, indices, lambdas, recoveries=None):
         assert reduced_index >= 0, "The reduced_index must be positive"
         self._reduced_index_ = reduced_index
         
@@ -25,6 +25,8 @@ class MarshallOlkinCopula(object):
         
         self._gamma_ = self.compute_gamma(self._reduced_index_)
         self._surv_subsets_ind_ = self.get_remaining_indexes_in_reduced_model(self._reduced_index_)
+        
+        self._recov_ = recoveries
     
     def compute_gamma(self, reduced_index):
         gamma = 0
