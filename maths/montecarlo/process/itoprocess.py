@@ -60,12 +60,12 @@ class ItoProcessPath(Path):
         shifted_time = self.time[1:]
         
         for i, (t, dt, sqrt_dt) in enumerate(zip(shifted_time, self._delta_, self._sqrt_delta_)):
-            d = self._drift_coeff_(t=t, index_time=i, x=values[i]) * dt
-            vol = self._diff_coeff_(t=t, index_time=i, x=values[i]) * sqrt_dt * gaussians[:, i]
+            d = self._drift_coeff_(t=t, index_time=i, x=values[:, i]) * dt
+            vol = self._diff_coeff_(t=t, index_time=i, x=values[:, i]) * sqrt_dt * gaussians[:, i]
             
-            dXt = d+vol            
+            dXt = d+vol             
             values[:, i+1] = values[:, i] + dXt
-            
+                        
         self._values_ = np.array(values)
             
     def check_time_drift_and_diff_coeff_consistency(self):
