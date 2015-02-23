@@ -14,7 +14,6 @@
 *.fls
 *~
 
-*.bat
 *.spyderproject
 *.spyderworkspace
 *.zip
