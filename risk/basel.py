@@ -10,7 +10,7 @@ from scipy.stats import norm
 
 import abc
 
-class BaselRegulatoryCapital(object):
+class BaselHelperCapital(object):
     __metaclass__ = abc.ABCMeta
     __systemic_fator__ = norm.ppf(0.999)    
     
@@ -30,10 +30,8 @@ class BaselRegulatoryCapital(object):
         K = self.compute_regulatory_capital(**kwargs)
         return 12.5*ead*K
     
-class BaselSwapRegulatoryCapital(BaselRegulatoryCapital):
-    def __init__(self, swap, **kwargs):
-        self.__swap__ = swap
-        self._maturity_ = swap.maturity
+class BaselRegulatoryCapital(BaselHelperCapital):
+    def __init__(self, **kwargs):
         self._init_constants_(**kwargs)
             
     def _init_constants_(self, **kwargs):
@@ -53,10 +51,10 @@ class BaselSwapRegulatoryCapital(BaselRegulatoryCapital):
         tmp = norm.ppf(dp)+np.sqrt(correl)*self.__systemic_fator__
         gauss_factor = norm.cdf(tmp / np.sqrt(1.-correl))
         
-        M = kwargs.get('maturity', self._maturity_)
+        M = kwargs['time_to_maturity']
         b_dp = self.__b__(dp)
         coeff = (1.+(M-2.5)*b_dp)/(1.-1.5*b_dp)
                 
         return lgd*(gauss_factor-dp)*coeff
     
-BaselRegulatoryCapital.register(BaselSwapRegulatoryCapital)
+BaselHelperCapital.register(BaselRegulatoryCapital)

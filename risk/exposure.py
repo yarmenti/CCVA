@@ -45,8 +45,9 @@ class EuropeanQuantileBrownianExposure(Exposure):
     def __call__(self, **kwargs):
         t = kwargs.get('t')
         portfolio = kwargs.get('portfolio')
-        derivative_index = kwargs.get('derivative_index')
-
+        #derivative_index = kwargs.get('derivative_index')        
+        derivative_index = list(portfolio.derivatives).index(self._contract_)
+        
         weights = portfolio.weights[:, derivative_index]
 
         risk_period = kwargs.get('risk_period', self._risk_period_)        
