@@ -8,7 +8,7 @@ Created on Thu Jan 22 10:55:50 2015
 import numpy as np
 
 class Portfolio(object):    
-    def __init__(self, matrix_positions, derivatives, prices):
+    def __init__(self, matrix_positions, derivatives, prices, exposures):
         mat = np.matrix(matrix_positions)        
         
         self._derivatives_ = np.array(derivatives)
@@ -19,6 +19,9 @@ class Portfolio(object):
                 
         self._port_amounts_ = (np.absolute(mat)).sum(axis = 1).T
         self._positions_ = mat.astype(float) / np.sum(np.absolute(mat), axis=1)
+        
+        self._exposures_ = np.array(exposures)
+        self._nb_contractors_, _ = self.weights.shape
         
     def compute_pl(self, assets_p_and_l):
         tmp = np.dot(self._positions_, assets_p_and_l)        
@@ -36,3 +39,16 @@ class Portfolio(object):
     @property
     def weights(self):
         return self._positions_
+        
+    def compute_exposure(self, t, **kwargs):
+        tmp = np.zeros((self._nb_contractors_, 1))
+        for i, e in enumerate(self._exposures_):
+            tmp += e(t=t, portfolio=self, **kwargs)
+                
+        return tmp
+            
+    def get_exposure(self, i):
+        return self._exposures_[i]
+            
+    def set_exposure(self, i, value):
+        self._exposures_[i] = value
