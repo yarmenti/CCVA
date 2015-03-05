@@ -92,4 +92,4 @@ class EuropeanContract(object):
         res *= weight
         self._underlying_ = tmp_underlying
         
-        return res
+        return np.maximum(res, 0.)

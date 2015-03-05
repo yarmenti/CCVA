@@ -54,6 +54,9 @@ class EuropeanQuantileBrownianExposure(Exposure):
         conf_level = kwargs.get('conf_level', self._conf_level_)
         df = kwargs.get('conf_level', self._df_)
 
+        if t+risk_period > self._contract_.maturity:
+            risk_period = self._contract_.maturity - t
+
         res = self._v_func_(t, risk_period, self._drift_, self._vol_, conf_level, weights, df)
    
         return res

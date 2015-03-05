@@ -17,25 +17,8 @@ class CCPPortfolio(Portfolio):
             assert np.sum(mat[:, i]) == 0, "The total portfolio composition is not neutral"
             
         ccp_positions = -mat
-        super(CCPPortfolio, self).__init__(ccp_positions, derivatives, prices)
-            
-        self._exposures_ = np.array(exposures)
-                
-        self._nb_cm_, _ = self.weights.shape
-        
-    def compute_exposure(self, t, **kwargs):
-        tmp = np.zeros((self.cm_number, 1))
-        for i, e in enumerate(self._exposures_):
-            tmp += e(t=t, portfolio=self, derivative_index=i, **kwargs)
-                
-        return tmp
-            
-    def get_exposure(self, i):
-        return self._exposures_[i]
-            
-    def set_exposure(self, i, value):
-        self._exposures_[i] = value
+        super(CCPPortfolio, self).__init__(ccp_positions, derivatives, prices, exposures)
             
     @property
     def cm_number(self):
-        return self._nb_cm_
+        return self._nb_contractors_
