@@ -80,4 +80,6 @@ class RegulatoryCapital(object):
         
         return res
     
-    
+class NoDFRegulatoryCapital(RegulatoryCapital):
+    def compute_k_cm(self, index, t):
+        return 0.
