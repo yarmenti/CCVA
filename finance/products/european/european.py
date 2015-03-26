@@ -5,7 +5,7 @@ Created on Thu Jan 15 15:30:02 2015
 @author: Yann
 """
 
-from abc import ABCMeta, abstractproperty
+from abc import ABCMeta, abstractmethod
 from maths.montecarlo.path import Path
 from finance.discountfactor import DiscountFactor
 
@@ -38,7 +38,11 @@ class EuropeanContract(object):
         
         return self.price(t2) - self.price(t1)     
     
-    @abstractproperty
+    @property
+    def pillars(self):
+        return np.array([])
+    
+    @abstractmethod
     def price(self, t):
         pass
     
@@ -49,7 +53,10 @@ class EuropeanContract(object):
     @property
     def discount_factor(self):
         return self._df_
-        
+    
+    def set_underlying(self, underlying):
+        self._underlying_ = underlying
+    
     @property
     def underlying(self):
         return self._underlying_
@@ -85,11 +92,12 @@ class EuropeanContract(object):
             res.fill(process_values[x])
             return res.tolist()
 
-        tmp_underlying = self._underlying_
-        self._underlying_ = DeterministicPath(f, process_values.keys())
-        
+        tmp_underlying = self.underlying
+        self.set_underlying(DeterministicPath(f, process_values.keys()))
+
         res = self.price(t_ph) - self.price(t)
-        res *= weight
-        self._underlying_ = tmp_underlying
+        res *= weight        
+        
+        self.set_underlying(tmp_underlying)
         
         return np.maximum(res, 0.)

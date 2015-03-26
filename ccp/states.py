@@ -14,7 +14,7 @@ class MembersState(object):
         self.resurrect_all()
         
     def die(self, *indexes):
-        for index in indexes:            
+        for index in indexes:
             assert (index < self._size_), "index out of bounds"
         
         self._survivng_people_[list(indexes)] = False

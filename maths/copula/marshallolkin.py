@@ -61,6 +61,14 @@ class MarshallOlkinCopula(object):
         rvs = -np.log(U)/lambdas
         return rvs
         
+    @property
+    def defaultable_subsets(self):
+        return self._subsets_[self._surv_subsets_ind_]
+        
+    @property
+    def defaultable_intensities(self):
+        return self._lambdas_[self._surv_subsets_ind_]
+        
     @classmethod
     def generate_subsets_and_intensities(cls, dimension):
         assert dimension > 0, "The dimension must be a positive number"

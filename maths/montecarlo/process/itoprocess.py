@@ -41,6 +41,10 @@ class ItoProcessPath(Path):
         if simulate:
             self.simulate()
     
+    def set_time(self, time):    
+        super(ItoProcessPath, self).set_time(time)
+        self.init_delta_time()
+    
     def _compute_differential_(self):
         raise NotImplementedError()
         

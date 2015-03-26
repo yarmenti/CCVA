@@ -41,7 +41,7 @@ class SwapContract(EuropeanContract):
         
         return self._get_St_(t)*num/den
         
-    def price(self, t):        
+    def price(self, t):
         fst_payment_idx = np.searchsorted(self._pillars_, t, side='right')
         if fst_payment_idx >= len(self._pillars_):
             return 0.
@@ -75,10 +75,9 @@ class SwapContract(EuropeanContract):
         t = kwargs['t']
         t_ph = kwargs['t_ph']
         
-        pill_i = (self._pillars_ <= t_ph)
-        pills = self._pillars_[pill_i]
-        
-        tmp = {t_: self._get_St_(t_) for t_ in pills}
+        last_pill_idx = np.searchsorted(self.pillars, t) - 1
+        last_pill = self.pillars[last_pill_idx]
+        tmp = {last_pill: self._get_St_(last_pill)}
 
         special_pill_i = (t < self._pillars_) & (self._pillars_ <= t_ph)
         if special_pill_i.any():

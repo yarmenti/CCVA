@@ -51,6 +51,10 @@ class Path(object):
     @abstractmethod
     def _compute_differential_(self):
         pass
+        
+    def set_time(self, time):
+        assert isinstance(time, (list, np.ndarray)), "The time must be of type list or np.array"
+        self._time_ = np.array(time)
     
     def simulate(self):
         differentials = self._compute_differential_()

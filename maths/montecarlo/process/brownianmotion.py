@@ -23,10 +23,18 @@ class BrownianMotion(ItoProcessPath):
             drift_p = tmp2
         
         super(BrownianMotion, self).__init__(X_0, drift_p, vol_p, time, brownian_correl_matrix, False)
-        self._m_delta_ = np.tile(self._delta_, (self.dimension, 1)).T
+        self.__init_m_delta()
         
         if simulate:
             self.simulate()
+        
+    def set_time(self, time):    
+        super(BrownianMotion, self).set_time(time)
+        self.init_delta_time()
+        self.__init_m_delta()
+        
+    def __init_m_delta(self):
+        self._m_delta_ = np.tile(self._delta_, (self.dimension, 1)).T
         
     def simulate(self):
         return super(BrownianMotion, self)._super_simulate_()    
