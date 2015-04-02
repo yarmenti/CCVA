@@ -29,7 +29,10 @@ class EuropeanContract(object):
     
     def _get_St_(self, t):
         return self._underlying_(t)[self._underlying_index_][0, 0]
-    
+
+    def S(self, t):
+        return self._get_St_(t)
+
     def p_and_l(self, t1, t2):
         assert (t1<=t2), "t1 must be lower than t2"
     
@@ -40,7 +43,7 @@ class EuropeanContract(object):
     
     @property
     def pillars(self):
-        return np.array([])
+        return np.array([0., self.maturity])
     
     @abstractmethod
     def price(self, t):

@@ -24,7 +24,6 @@ class ConstantPath(Path):
         for i in range(self.dimension):
             res[i, :] = self._x0_[i]
         
-#        res.fill(self._x0_)
         return res
         
 Path.register(ConstantPath)

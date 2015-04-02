@@ -10,12 +10,21 @@ from path import Path
 
 class DeterministicPath(Path):
     def __init__(self, f, time):        
-        super(DeterministicPath, self).__init__(f(0), time, False)        
+        super(DeterministicPath, self).__init__(f(0), time, False)
+        self.__func = f
+        
+        self.__compute_vals(self.time)
+                
+    def set_time(self, time):
+        super(DeterministicPath, self).set_time(time)
+        self.__compute_vals(self.time)
+                
+    def __compute_vals(self, time):
         vals = []
         for t in time:
-            vals.append(f(t))
+            vals.append(self.__func(t))
         
-        self._values_ = np.array(vals).transpose()
+        self._values_ = np.array(vals).transpose()    
                 
     def simulate(self):
         pass
