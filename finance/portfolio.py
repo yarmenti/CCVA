@@ -7,7 +7,7 @@ Created on Thu Jan 22 10:55:50 2015
 
 import numpy as np
 
-class PortfolioV2(object):
+class Portfolio(object):
     def __init__(self, matrix_positions, derivatives, exposures):
         self.positions = matrix_positions
         self.derivatives = derivatives
@@ -100,7 +100,7 @@ class PortfolioV2(object):
     def compute_exposure_projection(self, from_, towards_):
         raise NotImplementedError("Must be implemented in a subclass")
 
-class EquilibratedPortfolio(PortfolioV2):
+class EquilibratedPortfolio(Portfolio):
     def __init__(self, matrix_positions, derivatives, exposures):
         mat = matrix_positions if isinstance(matrix_positions, np.ndarray) else np.array(matrix_positions)
         for i in range(mat.shape[1]):
