@@ -7,7 +7,7 @@ Created on Thu Jan 22 15:39:46 2015
 
 import numpy as np
 
-class RegulatoryCapital(object):
+class CCPRegulatoryCapital(object):
     def __init__(self, beta, im_accounts, df_accounts, sig, portfolio, **kwargs):        
         cm_nb = df_accounts._size_
         
@@ -72,14 +72,13 @@ class RegulatoryCapital(object):
         res = 0
         for ebrm, im, df, is_alive in zip (ebrms.flat, ims, dfs, states):            
             if is_alive:
-                mod_ebrm = ebrm * self._ead_coeff_                
-                #print mod_ebrm, "_", im+df
+                mod_ebrm = ebrm * self._ead_coeff_
                 res += np.maximum(mod_ebrm - im - df, 0)
         
         res *= capital_ratio * risk_weight
         
         return res
     
-class NoDFRegulatoryCapital(RegulatoryCapital):
+class NoDFRegulatoryCapital(CCPRegulatoryCapital):
     def compute_k_cm(self, index, t):
         return 0.

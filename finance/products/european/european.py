@@ -70,37 +70,3 @@ class EuropeanContract(object):
         
     def __additional_points_subprocess__(self, **kwargs):
         return dict()
-        
-    def compute_brownian_quantile_price(self, t, h, drift_t, vol_t, alpha=0.95, weight=1., df=None):
-        if df is None:
-            df = self.discount_factor
-        
-        S_t = self._get_St_(t)
-        
-        t_ph = t+h
-        conf_level = alpha if weight>0 else 1-alpha
-        quantile_inv = norm.ppf(conf_level)
-        
-        S_th = S_t + drift_t*h + vol_t*np.sqrt(h)*quantile_inv
-        
-        process_values = {0: 0., t: S_t, t_ph: S_th}
-        process_values.update(self.__additional_points_subprocess__(
-            t=t, 
-            t_ph=t_ph,
-            current=process_values
-        ))
-        
-        def f(x):
-            res = np.empty(self._underlying_index_ + 1)
-            res.fill(process_values[x])
-            return res.tolist()
-
-        tmp_underlying = self.underlying
-        self.set_underlying(DeterministicPath(f, process_values.keys()))
-
-        res = self.price(t_ph) - self.price(t)
-        res *= weight        
-        
-        self.set_underlying(tmp_underlying)
-        
-        return np.maximum(res, 0.)

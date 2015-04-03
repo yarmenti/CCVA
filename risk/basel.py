@@ -85,7 +85,7 @@ class RegulatoryCapital(object):
         vm = self.__vm_acc.amounts[counterparty_index]
         im = self.__im_acc.amounts[counterparty_index]
 
-        ead = self.__beta_exposure * np.maximum(exposure - vm - im, 0)
+        ead = np.maximum(exposure - vm - im, 0)
 
         return ead
 
@@ -113,6 +113,8 @@ class RegulatoryCapital(object):
     def compute_kccr(self, counterparty_index, t, risk_horizon=1, conf_level=0.999, **kwargs):
         w = self.__compute_regulatory_weight(counterparty_index, t, risk_horizon)
         ead = self.__compute_ead(counterparty_index, t, risk_horizon, conf_level, **kwargs)
+
+        ead *= self.__beta_exposure
 
         return self.__cap_ratio*12.5*ead[0]*w
 
