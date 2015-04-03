@@ -54,8 +54,3 @@ class DFAccounts(Accounts):
         alive_number = np.count_nonzero(self.states.alive_states)
 
         return total/alive_number
-
-
-
-
-        #mean_contrib =
