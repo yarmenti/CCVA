@@ -17,7 +17,7 @@ class SwapContract(EuropeanContract):
         
         self.__pills = np.sort(dates)
 
-        self.__vect_df = np.vectorize(self.__df)
+        self.__vect_df = np.vectorize(self.discount_factor)
         self.__discounted_pills = self.__vect_df(self.__pills)
         self.__delta_pills = np.ediff1d(self.__pills)
 
@@ -71,7 +71,7 @@ class SwapContract(EuropeanContract):
       
     def __str__(self):
         pill = ("{" + ', '.join(['%.2f']*len(self.pillars))+"}")%tuple(self.pillars)
-        return "Swap contract of maturity T = %d years, over S^%d with strike K = %.3f, paying at %s"%(self.maturity, self.__udlyg_idx, self.strike, pill)
+        return "Swap contract of maturity T = %d years, over S^%d with strike K = %.3f, paying at %s"%(self.maturity, self.underlying_index, self.strike, pill)
     
     def __additional_points_subprocess__(self, **kwargs):
         t = kwargs['t']

@@ -61,7 +61,7 @@ class EuropeanQuantileBrownianExposure(Exposure):
         return res
 
     def __compute_pl_price(self, t, risk_period, alpha, drift, vol):
-        S_t = self.__contract._get_St_(t)
+        S_t = self.__contract.S(t)
         t_ph = t+risk_period
         quantile_inv = norm.ppf(alpha)
 
@@ -84,11 +84,11 @@ class EuropeanQuantileBrownianExposure(Exposure):
             return res.tolist()
 
         tmp_underlying = self.__contract.underlying
-        self.__contract.set_underlying(DeterministicPath(f, process_values.keys()))
+        self.__contract.underlying = DeterministicPath(f, process_values.keys())
 
         result = self.__contract.price(t_ph) - self.__contract.price(t)
 
-        self.__contract.set_underlying(tmp_underlying)
+        self.__contract.underlying = tmp_underlying
 
         return result
 
