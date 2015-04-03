@@ -10,17 +10,18 @@ import numpy as np
 class SkinInTheGame(object):
     def __init__(self, initial_value):
         assert (initial_value >= 0), "The initial value is not positive"
-        self._init_val_ = initial_value
-        self._val_ = initial_value
+        self.__init_val = initial_value
+        self.__val = initial_value
         
     def handle_breach(self, breach):
-        jump = -np.minimum(breach, self._val_)
-        self._val_ += jump        
-        self._val_ = np.maximum(self._val_, 0)
+        jump = -np.minimum(breach, self.__val)
+        self.__val += jump
+        self.__val = np.maximum(self.__val, 0)
         return breach+jump
-    
-    def __call__(self):
-        return self._val_
+
+    @property
+    def value(self):
+        return self.__val
     
     def recover(self, val=None):
-        self._val_ = self._init_val_ if val is None else val
+        self.__val = self.__init_val if val is None else val

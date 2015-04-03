@@ -8,52 +8,50 @@ Created on Fri Jan 09 19:37:13 2015
 import numpy as np
 from scipy import special
 
+
 class MarshallOlkinCopula(object):
-    
-    def __init__(self, reduced_index, total_number, indices, lambdas, recoveries=None):
+    def __init__(self, reduced_index, total_number, indices, lambdas):
         assert reduced_index >= 0, "The reduced_index must be positive"
-        self._reduced_index_ = reduced_index
+        self.__reduced_index = reduced_index
         
         assert(reduced_index <= total_number), "The number of indexes is leq than the reduced_index"
-        self._dimension_ = reduced_index
+        self.__dimension = total_number
         
         if indices and lambdas:            
-            self._subsets_ = np.array(indices)
-            self._lambdas_ = np.array(lambdas)            
+            self.__subsets = np.array(indices)
+            self.__lambdas = np.array(lambdas)
         else:
             raise NotImplementedError("Please give subsets of indexes and lambdas.")
         
-        self._gamma_ = self.compute_gamma(self._reduced_index_)
-        self._surv_subsets_ind_ = self.get_remaining_indexes_in_reduced_model(self._reduced_index_)
-        
-        self._recov_ = recoveries
+        self.__gamma = self.compute_gamma(self.__reduced_index)
+        self.__surv_subsets_ind = self.get_remaining_indexes_in_reduced_model(self.__reduced_index)
     
     def compute_gamma(self, reduced_index):
         gamma = 0
-        for i in np.arange(self._subsets_.size):
-            s = self._subsets_[i]
+        for i in np.arange(self.__subsets.size):
+            s = self.__subsets[i]
             if reduced_index in s:
-                gamma += self._lambdas_[i]
+                gamma += self.__lambdas[i]
                 
         return gamma
     
     def get_remaining_indexes_in_reduced_model(self, reduced_index):
         res = []
-        for i in np.arange(self._subsets_.size):
-            s = self._subsets_[i]
+        for i in np.arange(self.__subsets.size):
+            s = self.__subsets[i]
             if reduced_index not in s:
                 res.append(i)
                 
         return np.array(res)
     
     def simulate_default_times(self, number=1, use_init_indexes=True, not_included_index=None):
-        lambdas = self._lambdas_
+        lambdas = self.__lambdas
         if use_init_indexes:
-            lambdas = self._lambdas_[self._surv_subsets_ind_]
+            lambdas = self.defaultable_intensities
         else:
             if not_included_index:
                 cp_subsets = self.get_counterparties_indices(not_included_index)
-                lambdas = self._lambdas_[cp_subsets]
+                lambdas = self.__lambdas[cp_subsets]
             else:
                 raise ValueError("The not_included_index has not been given")
         
@@ -63,11 +61,11 @@ class MarshallOlkinCopula(object):
         
     @property
     def defaultable_subsets(self):
-        return np.array(self._subsets_[self._surv_subsets_ind_])
+        return np.array(self.__subsets[self.__surv_subsets_ind], copy=True)
         
     @property
     def defaultable_intensities(self):
-        return np.array(self._lambdas_[self._surv_subsets_ind_])
+        return np.array(self.__lambdas[self.__surv_subsets_ind], copy=True)
         
     @classmethod
     def generate_subsets_and_intensities(cls, dimension):

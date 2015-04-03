@@ -13,37 +13,41 @@ import numpy as np
 from scipy.stats import norm        
 from maths.montecarlo.deterministicpath import DeterministicPath
 
+
 class EuropeanContract(object):
     __metaclass__ = ABCMeta
     
     def __init__(self, underlying_path, maturity, df_process, underlying_index):
-        assert isinstance(underlying_path, Path), "The underlying must be of type Path"        
-        assert maturity in underlying_path.time, "The Maturity is not in the time grid" 
+        if not isinstance(underlying_path, Path):
+            raise ValueError("The underlying must be of type Path")
+
+        if maturity not in underlying_path.time:
+            raise ValueError("The Maturity is not in the time grid")
         
-        self._T_ = maturity
-        self._underlying_ = underlying_path
-        self._underlying_index_ = underlying_index        
-        
-        assert isinstance(df_process, DiscountFactor), "The df_process must be of type DiscountFactor"
-        self._df_ = df_process
-    
-    def _get_St_(self, t):
-        return self._underlying_(t)[self._underlying_index_][0, 0]
+        self.__mat = maturity
+        self.__udlyg = underlying_path
+        self.__udlyg_idx = underlying_index
+
+        if not isinstance(df_process, DiscountFactor):
+            raise ValueError("The df_process must be of type DiscountFactor")
+
+        self.__df = df_process
 
     def S(self, t):
-        return self._get_St_(t)
+        return self.__udlyg(t)[self.__udlyg_idx][0, 0]
 
     def p_and_l(self, t1, t2):
-        assert (t1<=t2), "t1 must be lower than t2"
+        if t1 > t2:
+            raise ValueError("t1 must be lower than t2")
     
-        if t1 < self._T_ and self._T_ < t2:
-            t2 = self._T_
+        if t1 < self.__mat < t2:
+            t2 = self.__mat
         
         return self.price(t2) - self.price(t1)     
     
     @property
     def pillars(self):
-        return np.array([0., self.maturity])
+        return np.array([0., self.maturity], copy=True)
     
     @abstractmethod
     def price(self, t):
@@ -51,22 +55,23 @@ class EuropeanContract(object):
     
     @property
     def maturity(self):
-        return self._T_
+        return self.__mat
     
     @property
     def discount_factor(self):
-        return self._df_
-    
-    def set_underlying(self, underlying):
-        self._underlying_ = underlying
-    
+        return self.__df
+
     @property
     def underlying(self):
-        return self._underlying_
-        
+        return self.__udlyg
+
+    @underlying.setter
+    def underlying(self, value):
+        self.__udlyg = value
+
     @property
     def underlying_index(self):
-        return self._underlying_index_
+        return self.__udlyg_idx
         
     def __additional_points_subprocess__(self, **kwargs):
         return dict()
