@@ -63,7 +63,7 @@ class Path(object):
     
     def __call__(self, t):
         assert (t >= 0), "t must be positive" 
-        assert (t in self.time), "The value of t must be in the time_grid, given: %s"%t
+        assert (t in self.time), "The value of t must be in the time_grid, given: %s. Time grid = %s"%(t, self.time)
         index = np.where(self.time==t)
         
         return self._values_[:, index]        

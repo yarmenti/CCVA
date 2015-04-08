@@ -6,6 +6,7 @@ Created on Thu Jan 22 10:55:50 2015
 """
 
 import numpy as np
+import sys
 
 class Portfolio(object):
     def __init__(self, matrix_positions, derivatives, exposures):
@@ -31,13 +32,14 @@ class Portfolio(object):
         self.__init_new_positions()
 
     def __init_new_positions(self):
-        self.__amounts = (np.absolute(self.__positions)).sum(axis = 1).reshape(1, self.__positions.shape[0])
         self.__notionals = np.absolute(self.__positions)
+        amounts = self.notionals.sum(axis=1)
+        self.__weights = (self.notionals.T / amounts).T
         self.__directions = np.sign(self.__positions)
 
     @property
-    def amounts(self):
-        return np.array(self.__amounts, copy=True)
+    def weights(self):
+        return np.array(self.__weights, copy=True)
 
     @property
     def notionals(self):
@@ -104,7 +106,8 @@ class EquilibratedPortfolio(Portfolio):
     def __init__(self, matrix_positions, derivatives, exposures):
         mat = matrix_positions if isinstance(matrix_positions, np.ndarray) else np.array(matrix_positions)
         for i in range(mat.shape[1]):
-            assert np.sum(mat[:, i]) == 0, "The total portfolio composition is not neutral"
+            if  np.sum(mat[:, i]) > sys.float_info.epsilon:
+                raise ValueError("The total portfolio composition is not neutral for index = %i, sum=%s"%(i, np.sum(mat[:, i])))
 
         super(EquilibratedPortfolio, self).__init__(matrix_positions, derivatives, exposures)
 
@@ -126,6 +129,9 @@ class EquilibratedPortfolio(Portfolio):
             self.__weights_asset[:, ii][neg_idx] = col[neg_idx] / pos
 
     def compute_exposure_projection(self, from_, towards_):
+        if from_ >= self.bank_numbers or towards_ >= self.bank_numbers:
+            raise ValueError("The indexes must be less than %s"%self.bank_numbers)
+
         if from_ == towards_:
             return np.zeros(self.__weights_asset.shape[1])
 

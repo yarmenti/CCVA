@@ -42,12 +42,12 @@ class EuropeanQuantileBrownianExposure(Exposure):
         self.__contract = european_contract
 
     def __call__(self, **kwargs):
-        t = kwargs.get('t')
-        risk_period = kwargs.get('risk_period')
+        t = kwargs['t']
+        risk_period = kwargs['risk_period']
         if t+risk_period > self.__contract.maturity:
             risk_period = self.__contract.maturity - t
 
-        alpha = kwargs.get('conf_level')
+        alpha = kwargs['conf_level']
         conf_level = [alpha, 1.-alpha]
 
         drift = kwargs.get('drift', self.__drift)
@@ -61,12 +61,13 @@ class EuropeanQuantileBrownianExposure(Exposure):
         return res
 
     def __compute_pl_price(self, t, risk_period, alpha, drift, vol):
-        S_t = self.__contract.S(t)
         t_ph = t+risk_period
         quantile_inv = norm.ppf(alpha)
 
         lst_pill_idx = np.searchsorted(self.__contract.pillars, t_ph)
-        pillars = np.unique(np.append(self.__contract.pillars[:lst_pill_idx], t_ph))
+        pillars = np.unique(np.append(self.__contract.pillars[:lst_pill_idx], [t, t_ph]))
+        pillars.sort()
+
         process_values = {}
         for t_ in pillars:
             if t_ <= t:
