@@ -122,29 +122,34 @@ class MarshallOlkinCopula(object):
 
 
 class StepWiseIntensitiesMarshallOlkinCopula(MarshallOlkinCopula):
+    __max_tau = 1000
+
     def __init__(self, subsets, hazard_rates, pillars):
         self.__subsets = np.array(subsets)
-        self.__hzrd_rates_mat = np.array(hazard_rates)
-        self.__pills = np.array(pillars)
-
-        if self.__hzrd_rates_mat.shape[0] == 1:
-            self.__hzrd_rates_mat = self.__hzrd_rates_mat.T
-
-        if self.__pills.ndim != 1:
-            raise ValueError("The pillars dimension number must be 1")
-
-        if self.__subsets.ndim != 1:
+        if self.__subsets.ndim == 1:
+            self.__max_index = max([max(x) for x in self.__subsets])
+            self.__subsets = np.array([self.__subsets]).T
+        else:
             raise ValueError("The subsets dimension number must be 1")
 
-        nb_subsets, nb_pills = self.__hzrd_rates_mat.shape
+        self.__pills = np.array(pillars)
+        if self.__pills.ndim == 1:
+            self.__pills = np.tile(self.pillars, (self.__subsets.size, 1))
 
-        if nb_subsets != self.__subsets.shape[0]:
-            raise ValueError("The subsets size must be the same as the hazard rates")
+        if self.__pills.shape[0] != self.__subsets.shape[0]:
+            raise ValueError("The pillars dimension do not match with the number of subsets.")
 
-        if nb_pills != self.__pills.shape[0]:
-            raise ValueError("The pillars size must be the same as the hazard rates")
+        self.__hzrd_rates_mat = np.array(hazard_rates)
+        h_subset_nb, h_pills_nb = self.__hzrd_rates_mat.shape
+        if h_subset_nb == self.__pills.shape[1] and h_pills_nb == self.__subsets.shape[0]:
+            self.__hzrd_rates_mat = self.__hzrd_rates_mat.T
 
-        self.__models = [StepwiseConstantIntensity(self.pillars, hz) for hz in self.__hzrd_rates_mat]
+        h_subset_nb, h_pills_nb = self.__hzrd_rates_mat.shape
+        if h_subset_nb != self.__subsets.shape[0] or h_pills_nb != self.__pills.shape[1]:
+            raise ValueError("The dimension do not match.")
+
+        self.__models = [StepwiseConstantIntensity(pills, hz)
+                         for hz, pills in zip(self.__hzrd_rates_mat, self.__pills)]
 
     @property
     def subsets(self):
@@ -163,27 +168,33 @@ class StepWiseIntensitiesMarshallOlkinCopula(MarshallOlkinCopula):
         return np.array(self.__models, copy=True)
 
     def get_indexes_including(self, index):
+        if index > self.__max_index:
+            raise ValueError("The obligor_index must be lower than %s, given: %s"%(self.__max_index, index))
+
         res = []
         for (ii, set) in enumerate(self.subsets):
-            if index in set:
+            if index in set[0]:
                 res.append(ii)
 
         return res
 
     @staticmethod
-    def __objective(models, exp_rvs):
+    def __objective(models, exp_rvs, max_tau):
         res = []
 
         for m, e in zip(models, exp_rvs):
             f = lambda t: e + m.log_survival_proba(t)
-            tau = brentq(f, 0, 10000)
+            try:
+                tau = brentq(f, 0, max_tau)
+            except:
+                tau = max_tau
+
             res.append(tau)
 
         return np.array(res)
 
     def generate_default_times(self, obligor_index, number=1, exp_rvs=None):
         indexes = self.get_indexes_including(obligor_index)
-
         models = self.models[indexes]
 
         if exp_rvs is not None:
@@ -196,6 +207,30 @@ class StepWiseIntensitiesMarshallOlkinCopula(MarshallOlkinCopula):
 
         res = np.zeros(rvs.shape)
         for ii, exps in enumerate(rvs):
-            res[ii, :] = self.__objective(models, exps)
+            res[ii, :] = self.__objective(models, exps, self.__max_tau)
 
         return res
+
+    def gamma(self, subset_index, t):
+        if subset_index >= self.subsets.shape[0]:
+            raise ValueError("The subset_index must be leq than %s, "
+                             "given: %s"%(self.subsets.shape[0], subset_index))
+
+        model = self.models[subset_index]
+        index = np.searchsorted(model.pillars, t, side='left')-1
+        index = np.minimum(index, model.intensities.size-1)
+
+        return model.intensities[index]
+
+    def tot_gamma(self, obligor_index, t):
+        indexes = self.get_indexes_including(obligor_index)
+        models = self.models[indexes]
+
+        gamma = 0.
+        for m in models:
+            index = np.searchsorted(m.pillars, t, side='left')-1
+            index = np.minimum(index, m.intensities.size-1)
+
+            gamma += m.intensities[index]
+
+        return gamma

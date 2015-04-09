@@ -8,7 +8,24 @@ Created on Thu Jan 22 10:55:50 2015
 import numpy as np
 import sys
 
+
 class Portfolio(object):
+
+    @staticmethod
+    def generate_1_vs_all_positions(alone_index, positive_single_pos_sgn, obligors_nb):
+        if alone_index >= obligors_nb:
+            raise ValueError("alone_index = %s must be leq than "
+                             "obligors_nb = %s"%(alone_index, obligors_nb))
+
+        sgn = 1. if positive_single_pos_sgn else -1.
+
+        weights = -sgn/(obligors_nb-1)
+        res = np.empty(obligors_nb)
+        res.fill(weights)
+        res[alone_index] = sgn
+
+        return res
+
     def __init__(self, matrix_positions, derivatives, exposures):
         self.positions = matrix_positions
         self.derivatives = derivatives
@@ -105,9 +122,12 @@ class Portfolio(object):
 class EquilibratedPortfolio(Portfolio):
     def __init__(self, matrix_positions, derivatives, exposures):
         mat = matrix_positions if isinstance(matrix_positions, np.ndarray) else np.array(matrix_positions)
-        for i in range(mat.shape[1]):
-            if  np.sum(mat[:, i]) > sys.float_info.epsilon:
-                raise ValueError("The total portfolio composition is not neutral for index = %i, sum=%s"%(i, np.sum(mat[:, i])))
+
+        sum_col = mat.sum(axis=0)
+        for (i, sum_) in enumerate(sum_col):
+            if sum_ > sys.float_info.epsilon:
+                raise ValueError("The total portfolio composition is not neutral "
+                                 "for index = %i, sum=%s"%(i, sum_))
 
         super(EquilibratedPortfolio, self).__init__(matrix_positions, derivatives, exposures)
 
