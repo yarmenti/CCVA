@@ -7,6 +7,9 @@ Created on Fri Jan 09 19:37:13 2015
 
 import numpy as np
 from scipy import special
+from scipy.stats import expon
+from scipy.optimize import brentq
+from credit.default_models import StepwiseConstantIntensity
 
 
 class MarshallOlkinCopula(object):
@@ -116,3 +119,83 @@ class MarshallOlkinCopula(object):
         lambdas = np.append(lambdas_mo_h1, lambdas_mo_eq1)
         
         return subsets, lambdas
+
+
+class StepWiseIntensitiesMarshallOlkinCopula(MarshallOlkinCopula):
+    def __init__(self, subsets, hazard_rates, pillars):
+        self.__subsets = np.array(subsets)
+        self.__hzrd_rates_mat = np.array(hazard_rates)
+        self.__pills = np.array(pillars)
+
+        if self.__hzrd_rates_mat.shape[0] == 1:
+            self.__hzrd_rates_mat = self.__hzrd_rates_mat.T
+
+        if self.__pills.ndim != 1:
+            raise ValueError("The pillars dimension number must be 1")
+
+        if self.__subsets.ndim != 1:
+            raise ValueError("The subsets dimension number must be 1")
+
+        nb_subsets, nb_pills = self.__hzrd_rates_mat.shape
+
+        if nb_subsets != self.__subsets.shape[0]:
+            raise ValueError("The subsets size must be the same as the hazard rates")
+
+        if nb_pills != self.__pills.shape[0]:
+            raise ValueError("The pillars size must be the same as the hazard rates")
+
+        self.__models = [StepwiseConstantIntensity(self.pillars, hz) for hz in self.__hzrd_rates_mat]
+
+    @property
+    def subsets(self):
+        return np.array(self.__subsets, copy=True)
+
+    @property
+    def intensities(self):
+        return np.array(self.__hzrd_rates_mat, copy=True)
+
+    @property
+    def pillars(self):
+        return np.array(self.__pills, copy=True)
+
+    @property
+    def models(self):
+        return np.array(self.__models, copy=True)
+
+    def get_indexes_including(self, index):
+        res = []
+        for (ii, set) in enumerate(self.subsets):
+            if index in set:
+                res.append(ii)
+
+        return res
+
+    @staticmethod
+    def __objective(models, exp_rvs):
+        res = []
+
+        for m, e in zip(models, exp_rvs):
+            f = lambda t: e + m.log_survival_proba(t)
+            tau = brentq(f, 0, 10000)
+            res.append(tau)
+
+        return np.array(res)
+
+    def generate_default_times(self, obligor_index, number=1, exp_rvs=None):
+        indexes = self.get_indexes_including(obligor_index)
+
+        models = self.models[indexes]
+
+        if exp_rvs is not None:
+            rvs = np.array(exp_rvs)
+            if rvs.shape[1] != len(indexes):
+                raise ValueError("The exp rv don't have the good columns size. "
+                                 "Given %s, expected %s"%(rvs.shape[1], len(indexes)))
+        else:
+            rvs = expon.rvs(size=[number, len(indexes)])
+
+        res = np.zeros(rvs.shape)
+        for ii, exps in enumerate(rvs):
+            res[ii, :] = self.__objective(models, exps)
+
+        return res
