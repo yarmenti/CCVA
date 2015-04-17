@@ -1,12 +1,6 @@
-# -*- coding: utf-8 -*-
-"""
-Created on Wed Jan 14 15:33:01 2015
-
-@author: Yann
-"""
-
 import numpy as np
-from maths.montecarlo.path import Process
+
+from maths.montecarlo.processes.base import Process
 
 
 class BrownianMotion(Process):
@@ -99,6 +93,9 @@ class BrownianMotion(Process):
         vals = np.cumsum(np.hstack((self._x0, dXt)), 1)
         self.values = vals
 
+Process.register(BrownianMotion)
+
+
 class GeometricBrownianMotion(BrownianMotion):
     def simulate(self):
         gauss = np.random.multivariate_normal(np.zeros(self.dimension), self.correl_matrix, self.time.size-1).T
@@ -112,3 +109,5 @@ class GeometricBrownianMotion(BrownianMotion):
         dXt = np.exp(dlogXt)
 
         self.values = np.cumprod(np.hstack((self._x0, dXt)), 1)
+
+Process.register(GeometricBrownianMotion)

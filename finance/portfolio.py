@@ -1,15 +1,17 @@
-# -*- coding: utf-8 -*-
-"""
-Created on Thu Jan 22 10:55:50 2015
-
-@author: Yann
-"""
-
 import numpy as np
 import sys
 
 
 class Portfolio(object):
+    __positions = None
+    __weights = None
+    __directions = None
+
+    __notionals = None
+    __nb_der = None
+    __derivatives = None
+    __exposures = None
+
 
     @staticmethod
     def generate_1_vs_all_positions(alone_index, positive_single_pos_sgn, obligors_nb):
@@ -127,6 +129,8 @@ class Portfolio(object):
         raise NotImplementedError("Must be implemented in a subclass")
 
 class EquilibratedPortfolio(Portfolio):
+    __weights_asset = None
+
     def __init__(self, matrix_positions, derivatives, exposures):
         mat = matrix_positions if isinstance(matrix_positions, np.ndarray) else np.array(matrix_positions)
 
@@ -171,6 +175,7 @@ class EquilibratedPortfolio(Portfolio):
                 w_towards[i] = 0.
 
         return np.absolute(w_towards)
+
 
 class CCPPortfolio(EquilibratedPortfolio):
     def __init__(self, members_positions_mat, derivatives, exposures):

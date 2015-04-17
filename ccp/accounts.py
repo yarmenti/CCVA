@@ -1,9 +1,9 @@
-__author__ = 'Yann'
-
-
 import numpy as np
 
+
 class Accounts(object):
+    __states = None
+
     def __init__(self, states, derivatives_nb):
         self.states = states
         self.__amounts = np.zeros([self.__states.size, derivatives_nb])
@@ -25,6 +25,10 @@ class Accounts(object):
     @property
     def amounts(self):
         return np.array(self.__amounts, copy=True)
+
+    @property
+    def size(self):
+        return self.__states.size
 
     def put_amounts(self, index, amounts):
         if self.__states.is_alive(index):

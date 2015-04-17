@@ -1,10 +1,3 @@
-# -*- coding: utf-8 -*-
-"""
-Created on Thu Jan 15 15:37:27 2015
-
-@author: Yann
-"""
-
 import numpy as np
 from scipy import interpolate
 
@@ -71,7 +64,8 @@ class SwapContract(EuropeanContract):
       
     def __str__(self):
         pill = ("{" + ', '.join(['%.2f']*len(self.pillars))+"}")%tuple(self.pillars)
-        return "Swap contract of maturity T = %d years, over S^%d with strike K = %.3f, paying at %s"%(self.maturity, self.underlying_index, self.strike, pill)
+        return "Swap contract of maturity T = %d years, over S^%d with strike K = %.3f, paying at %s" \
+               %(self.maturity, self.underlying_index, self.strike, pill)
     
     def __additional_points_subprocess__(self, **kwargs):
         t = kwargs['t']

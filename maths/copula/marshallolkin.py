@@ -1,11 +1,3 @@
-# -*- coding: utf-8 -*-
-"""
-Created on Fri Jan 09 19:37:13 2015
-
-@author: Yann
-"""
-from astropy.coordinates.earth_orientation import obliquity
-
 import numpy as np
 from scipy import special
 from scipy.stats import expon

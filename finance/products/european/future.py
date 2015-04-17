@@ -1,11 +1,5 @@
-# -*- coding: utf-8 -*-
-"""
-Created on Thu Jan 15 15:37:27 2015
-
-@author: Yann
-"""
-
 from .european import EuropeanContract
+
 
 class FutureContract(EuropeanContract):
     def __init__(self, underlying, df_process, maturity, underlying_index=0):

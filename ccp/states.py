@@ -1,14 +1,9 @@
-# -*- coding: utf-8 -*-
-"""
-Created on Thu Jan 22 10:34:11 2015
-
-@author: Yann
-"""
-
 import numpy as np
 
 
 class MembersState(object):
+    __surviving_people = None
+
     def __init__(self, cm_number):
         self.__size = cm_number
         self.__accounts = []

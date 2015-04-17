@@ -1,11 +1,5 @@
-# -*- coding: utf-8 -*-
-"""
-Created on Thu Jan 22 10:41:53 2015
-
-@author: Yann
-"""
-
 import numpy as np
+
 
 class SkinInTheGame(object):
     def __init__(self, initial_value):

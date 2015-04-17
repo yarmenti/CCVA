@@ -1,15 +1,9 @@
-# -*- coding: utf-8 -*-
-"""
-Created on Thu Jan 22 15:39:46 2015
-
-@author: Yann
-"""
-
 import numpy as np
+
 
 class CCPRegulatoryCapital(object):
     def __init__(self, beta, im_accounts, df_accounts, sig, portfolio, **kwargs):        
-        cm_nb = df_accounts._size_
+        cm_nb = df_accounts.size
         
         self.__df = df_accounts
         self.__im = im_accounts
@@ -78,7 +72,8 @@ class CCPRegulatoryCapital(object):
         res *= capital_ratio * risk_weight
         
         return res
-    
+
+
 class NoDFRegulatoryCapital(CCPRegulatoryCapital):
     def compute_k_cm(self, index, t):
         return 0.

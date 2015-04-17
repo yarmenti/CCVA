@@ -1,10 +1,3 @@
-# -*- coding: utf-8 -*-
-"""
-Created on Fri Feb 27 12:42:15 2015
-
-@author: Yann
-"""
-
 import abc
 import numpy as np
 
@@ -19,6 +12,7 @@ class DefaultableModel(object):
     def default_proba(self, t):
         return 1. - self.survival_proba(t)
 
+
 class FlatIntensity(DefaultableModel):
     def __init__(self, intensity):
         if intensity < 0:
@@ -31,6 +25,9 @@ class FlatIntensity(DefaultableModel):
             return 1.
 
         return np.exp(-self.__lambda*t)
+
+DefaultableModel.register(FlatIntensity)
+
 
 class StepwiseConstantIntensity(DefaultableModel):
     def __init__(self, pillars, hazard_rates):
@@ -72,5 +69,4 @@ class StepwiseConstantIntensity(DefaultableModel):
 
         return np.exp(self.log_survival_proba(t))
 
-DefaultableModel.register(FlatIntensity)
 DefaultableModel.register(StepwiseConstantIntensity)

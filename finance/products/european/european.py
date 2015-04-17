@@ -1,24 +1,16 @@
-# -*- coding: utf-8 -*-
-"""
-Created on Thu Jan 15 15:30:02 2015
-
-@author: Yann
-"""
-
 from abc import ABCMeta, abstractmethod
-from maths.montecarlo.path import Path, Process
-from finance.discountfactor import DiscountFactor
 
 import numpy as np
-from scipy.stats import norm        
-from maths.montecarlo.deterministicpath import DeterministicPath
+
+from maths.montecarlo.processes.base import Process
+from finance.discountfactor import DiscountFactor
 
 
 class EuropeanContract(object):
     __metaclass__ = ABCMeta
     
     def __init__(self, underlying_path, maturity, df_process, underlying_index):
-        if not isinstance(underlying_path, (Path, Process)):
+        if not isinstance(underlying_path, Process):
             raise ValueError("The underlying must be of type Path")
 
         if maturity not in underlying_path.time:
@@ -72,6 +64,3 @@ class EuropeanContract(object):
     @property
     def underlying_index(self):
         return self.__udlyg_idx
-        
-    def __additional_points_subprocess__(self, **kwargs):
-        return dict()
