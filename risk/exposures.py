@@ -17,7 +17,7 @@ class Exposure(object):
         pass
 
 
-class EuropeanQuantileBrownianExposure(Exposure):
+class EuropeanQuantilExposure(Exposure):
     def __init__(self, european_contract, df, drift, vol):
         if isinstance(vol, (list, np.ndarray)):
             if len(vol) != 1:
@@ -61,16 +61,7 @@ class EuropeanQuantileBrownianExposure(Exposure):
         pillars = np.unique(np.append(self.__contract.pillars[:lst_pill_idx], [t, t_ph]))
         pillars.sort()
 
-        process_values = []
-        for t_ in pillars:
-            if t_ <= t:
-                St_ = self.__contract.S(t_)
-            else:
-                St_ = St_ + drift*(t_-t__) + vol*np.sqrt(t_-t__)*quantile_inv
-
-            process_values.append(St_)
-            t__ = t_
-            St__ = St_
+        process_values = self.__compute_diff(t, pillars, drift, vol, quantile_inv)
 
         tmp_underlying = self.__contract.underlying
         values = np.tile(process_values, (self.__contract.underlying.dimension, 1))
@@ -82,4 +73,45 @@ class EuropeanQuantileBrownianExposure(Exposure):
 
         return result
 
+    @abstractmethod
+    def _compute_diff(self, t, pillars, drift, vol, quantile_inv):
+        pass
+
+    @property
+    def contract(self):
+        return self.__contract
+
+
+class EuropeanQuantileBrownianExposure(EuropeanQuantilExposure):
+
+    def _compute_diff(self, t, pillars, drift, vol, quantile_inv):
+        process_values = []
+        for t_ in pillars:
+            if t_ <= t:
+                St_ = self.contract.S(t_)
+            else:
+                St_ = St_ + drift*(t_-t__) + vol*np.sqrt(t_-t__)*quantile_inv
+
+            process_values.append(St_)
+            t__ = t_
+
+        return process_values
+
+class EuropeanQuantileGeomBrownianExposure(Exposure):
+    def _compute_diff(self, t, pillars, drift, vol, quantile_inv):
+        d = drift - .5*vol**2
+
+        process_values = []
+        for t_ in pillars:
+            if t_ <= t:
+                St_ = self.contract.S(t_)
+            else:
+                St_ = St_*np.exp(d*(t_-t__) + vol*np.sqrt(t_-t__)*quantile_inv)
+
+            process_values.append(St_)
+            t__ = t_
+
+        return process_values
+
 Exposure.register(EuropeanQuantileBrownianExposure)
+Exposure.register(EuropeanQuantileGeomBrownianExposure)
