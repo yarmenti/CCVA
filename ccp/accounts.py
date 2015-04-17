@@ -31,7 +31,7 @@ class Accounts(object):
             self.__amounts[index, :] = amounts
 
     def get_amount(self, index):
-        return self.__amounts[index, :]
+        return self.amounts[index, :]
 
     def reset(self, **kwargs):
         self.__amounts = np.zeros(self.__amounts.shape)

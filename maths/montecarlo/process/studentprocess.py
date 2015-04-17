@@ -26,7 +26,7 @@ class StudentProcess(ItoProcessPath):
     def simulate(self):
         return super(StudentProcess, self)._super_simulate_()        
         
-    def _compute_differential_(self):
+    def _compute_differential(self):
         k = np.random.chisquare(self._df_)
         
         zeros = np.zeros(self._correl_matrix.shape[0])

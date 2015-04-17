@@ -45,7 +45,7 @@ class ItoProcessPath(Path):
         super(ItoProcessPath, self).set_time(time)
         self.init_delta_time()
     
-    def _compute_differential_(self):
+    def _compute_differential(self):
         raise NotImplementedError()
         
     def simulate(self):
@@ -60,7 +60,7 @@ class ItoProcessPath(Path):
         
         values = np.ndarray((self.dimension, self.time.size))
         
-        values[:, 0] = self._x0_.reshape(self.dimension)
+        values[:, 0] = self._x0.reshape(self.dimension)
         shifted_time = self.time[1:]
         
         for i, (t, dt, sqrt_dt) in enumerate(zip(shifted_time, self._delta_, self._sqrt_delta_)):
@@ -70,7 +70,7 @@ class ItoProcessPath(Path):
             dXt = d+vol             
             values[:, i+1] = values[:, i] + dXt
                         
-        self._values_ = np.array(values)
+        self.__vals = np.array(values)
             
     def check_time_drift_and_diff_coeff_consistency(self):
         if self._is_drift_process:

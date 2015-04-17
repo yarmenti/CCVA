@@ -6,7 +6,7 @@ Created on Thu Jan 15 15:30:02 2015
 """
 
 from abc import ABCMeta, abstractmethod
-from maths.montecarlo.path import Path
+from maths.montecarlo.path import Path, Process
 from finance.discountfactor import DiscountFactor
 
 import numpy as np
@@ -18,7 +18,7 @@ class EuropeanContract(object):
     __metaclass__ = ABCMeta
     
     def __init__(self, underlying_path, maturity, df_process, underlying_index):
-        if not isinstance(underlying_path, Path):
+        if not isinstance(underlying_path, (Path, Process)):
             raise ValueError("The underlying must be of type Path")
 
         if maturity not in underlying_path.time:
@@ -34,7 +34,7 @@ class EuropeanContract(object):
         self.__df = df_process
 
     def S(self, t):
-        return self.__udlyg(t)[self.__udlyg_idx][0, 0]
+        return self.__udlyg(t)[self.__udlyg_idx, 0]
 
     def p_and_l(self, t1, t2):
         if t1 > t2:

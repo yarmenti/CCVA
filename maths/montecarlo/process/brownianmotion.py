@@ -39,7 +39,7 @@ class BrownianMotion(ItoProcessPath):
     def simulate(self):
         return super(BrownianMotion, self)._super_simulate_()    
 
-    def _compute_differential_(self):
+    def _compute_differential(self):
         zeros = np.zeros(self._correl_matrix.shape[0])
         gaussians = np.random.multivariate_normal(zeros, self._correl_matrix, self.time.size-1)                
         tmp = np.multiply(self._diff_coeff_(), gaussians)
@@ -55,7 +55,7 @@ class StandardBrownianMotion(BrownianMotion):
         _ = lambda **x:0        
         super(StandardBrownianMotion, self).__init__(X_0, _, volatility, time, brownian_correl_matrix)        
         
-    def _compute_differential_(self):
+    def _compute_differential(self):
         zeros = np.zeros(self._correl_matrix.shape[0])
         gaussians = np.random.multivariate_normal(zeros, self._correl_matrix, self.time.size-1)
                 
@@ -86,4 +86,4 @@ class BrownianMotionWithJumps(BrownianMotion):
         
         for (t, j) in zip(jumps_times, jumps_sizes):
             index = np.argmax(self.time>=t)
-            self._values_[:, index:] = add_jump(self._values_[:, index:], j)            
+            self.__vals[:, index:] = add_jump(self.__vals[:, index:], j)

@@ -94,8 +94,15 @@ class Portfolio(object):
 
         self.__exposures = expos
 
-    def compute_value(self, derivative_prices):
-        return np.dot(self.positions, derivative_prices)
+    def compute_value(self, derivative_prices, **kwargs):
+        res = np.dot(self.positions, derivative_prices).reshape((self.bank_numbers, 1))
+        if 'from_' in kwargs:
+            res = res[kwargs['from_'], :]
+            if 'towards_' in kwargs:
+                projection = self.compute_projection(kwargs['from_'], kwargs['towards_'])
+                res = np.multiply(res, projection)
+
+        return res
 
     def compute_exposure(self, t, **kwargs):
         directions = [1, -1]
@@ -109,14 +116,14 @@ class Portfolio(object):
         if 'from_' in kwargs:
             exposures = exposures[kwargs['from_'], :]
             if 'towards_' in kwargs:
-                projection = self.compute_exposure_projection(kwargs['from_'], kwargs['towards_'])
+                projection = self.compute_projection(kwargs['from_'], kwargs['towards_'])
                 exposures = np.multiply(exposures, projection)
                 if kwargs.get('total', False):
                     exposures = exposures.sum()
 
         return exposures
 
-    def compute_exposure_projection(self, from_, towards_):
+    def compute_projection(self, from_, towards_):
         raise NotImplementedError("Must be implemented in a subclass")
 
 class EquilibratedPortfolio(Portfolio):
@@ -148,7 +155,7 @@ class EquilibratedPortfolio(Portfolio):
             self.__weights_asset[:, ii][pos_idx] = col[pos_idx] / pos
             self.__weights_asset[:, ii][neg_idx] = col[neg_idx] / pos
 
-    def compute_exposure_projection(self, from_, towards_):
+    def compute_projection(self, from_, towards_):
         if from_ >= self.bank_numbers or towards_ >= self.bank_numbers:
             raise ValueError("The indexes must be less than %s"%self.bank_numbers)
 
@@ -160,7 +167,7 @@ class EquilibratedPortfolio(Portfolio):
 
         prod = np.multiply(w_from, w_towards)
         for (i, p) in enumerate(prod):
-            if p > 0:
+            if p >= 0:
                 w_towards[i] = 0.
 
         return np.absolute(w_towards)

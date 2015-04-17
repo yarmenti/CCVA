@@ -15,7 +15,7 @@ class RegulatoryCapital(object):
                                     "BBB": 1.0, "BB": 2.0, "B": 3.0,
                                     "CCC": 10.0, "CC": 15.0}
 
-    def __init__(self, vm_accounts, im_accounts, portfolio, default_proba, bank_index=0, cap_ratio=0.08):
+    def __init__(self, vm_accounts, im_accounts, portfolio, default_proba, recoveries, bank_index=0, cap_ratio=0.08):
         self.__cap_ratio = cap_ratio
         self.__bank_idx = bank_index
         self.__port = portfolio
@@ -23,9 +23,13 @@ class RegulatoryCapital(object):
         self.__vm_acc = vm_accounts
 
         if self.__port.bank_numbers != len(default_proba):
-            raise ValueError("The portfolio.nb_banks != len(default_proba)")
-
+            raise ValueError("The portfolio.nb_banks (%s) "
+                             "!= len(default_proba) (%s)"%(self.__port.bank_numbers, len(default_proba)))
         self.__default_probs = default_proba
+
+        if self.__port.bank_numbers != len(recoveries):
+            raise ValueError("The portfolio.nb_banks != len(recoveries)")
+        self.__recoveries = recoveries
 
     @classmethod
     def __b(cls, x):
@@ -42,7 +46,7 @@ class RegulatoryCapital(object):
         return term1 + term2
 
     def __compute_regulatory_weight(self, counterparty_index, t, risk_horizon):
-        r = self.__default_probs[counterparty_index].recovery
+        r = self.__recoveries[counterparty_index]
         lgd = 1.-r
 
         dp = self.__default_probs[counterparty_index].default_proba(risk_horizon)
@@ -61,7 +65,7 @@ class RegulatoryCapital(object):
         return lgd * (gauss_factor - dp) * coeff
 
     def __compute_effective_mat(self, counterparty_index, t):
-        projection = self.__port.compute_exposure_projection(self.__bank_idx, counterparty_index)
+        projection = self.__port.compute_projection(self.__bank_idx, counterparty_index)
         positions = self.__port.positions[self.__bank_idx, :]
 
         notionals = np.multiply(projection, positions)
@@ -110,7 +114,7 @@ class RegulatoryCapital(object):
 
         return rating
 
-    def compute_kccr(self, counterparty_index, t, risk_horizon=1, conf_level=0.999, **kwargs):
+    def compute_kccr(self, counterparty_index, t, risk_horizon=1., conf_level=0.999, **kwargs):
         w = self.__compute_regulatory_weight(counterparty_index, t, risk_horizon)
         ead = self.__compute_ead(counterparty_index, t, risk_horizon, conf_level, **kwargs)
 
@@ -118,7 +122,7 @@ class RegulatoryCapital(object):
 
         return self.__cap_ratio*12.5*ead[0]*w
 
-    def compute_kcva(self, counterparty_index, t, risk_horizon=1, conf_level=0.999, **kwargs):
+    def compute_kcva(self, counterparty_index, t, risk_horizon=1., conf_level=0.999, **kwargs):
         mult = 0.5*2.33
         sqrt_h = np.sqrt(risk_horizon)
 

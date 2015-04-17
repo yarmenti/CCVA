@@ -59,7 +59,8 @@ class StepwiseConstantIntensity(DefaultableModel):
         self.__log_probs = np.insert(np.cumsum(tmp), 0, 0.)
 
     def log_survival_proba(self, t):
-        index = np.searchsorted(self.__pill, t, side='left')-1
+        index = max(np.searchsorted(self.__pill, t, side='left')-1, 0)
+
         cum_sum = self.__log_probs[index]
         missing = (t - self.__pill[index])*self.__hazard_rates[np.minimum(index, self.__hzrd_max_index)]
 

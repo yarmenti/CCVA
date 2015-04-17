@@ -4,6 +4,7 @@ Created on Fri Jan 09 19:37:13 2015
 
 @author: Yann
 """
+from astropy.coordinates.earth_orientation import obliquity
 
 import numpy as np
 from scipy import special
@@ -184,17 +185,26 @@ class StepWiseIntensitiesMarshallOlkinCopula(MarshallOlkinCopula):
 
         for m, e in zip(models, exp_rvs):
             f = lambda t: e + m.log_survival_proba(t)
-            try:
-                tau = brentq(f, 0, max_tau)
-            except:
-                tau = max_tau
 
+            # No need to call the routine as it will fail because
+            # f(0) is positive and f(max_tau) is also positive
+            # thus the Brent routine is not necessary
+            tau = None
+            if f(max_tau) >= 0:
+                tau = max_tau
+            else:
+                tau, result = brentq(f, 0, max_tau, full_output=True)
+                if not result.converged:
+                    tau = max_tau
             res.append(tau)
 
         return np.array(res)
 
-    def generate_default_times(self, obligor_index, number=1, exp_rvs=None):
-        indexes = self.get_indexes_including(obligor_index)
+    def generate_default_times(self, obligor_index=None, subsets_indexes=None , number=1, exp_rvs=None):
+        if obligor_index is None and subsets_indexes is None:
+            raise ValueError("Both obligor_index and subsets_indexes cannot be None at the same time")
+
+        indexes = self.get_indexes_including(obligor_index) if obligor_index is not None else subsets_indexes
         models = self.models[indexes]
 
         if exp_rvs is not None:
