@@ -14,7 +14,7 @@ class SkinInTheGame(object):
         return breach+jump
 
     @property
-    def value(self):
+    def i(self):
         return self.__val
     
     def recover(self, val=None):

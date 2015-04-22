@@ -180,5 +180,5 @@ class EquilibratedPortfolio(Portfolio):
 
 class CCPPortfolio(EquilibratedPortfolio):
     def __init__(self, members_positions_mat, derivatives, exposures):
-        ccp_positions = -members_positions_mat
+        ccp_positions = -np.array(members_positions_mat)
         super(CCPPortfolio, self).__init__(ccp_positions, derivatives, exposures)
