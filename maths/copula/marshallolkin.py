@@ -224,8 +224,11 @@ class StepWiseIntensitiesMarshallOlkinCopula(MarshallOlkinCopula):
 
         return model.intensities[index]
 
-    def tot_gamma(self, obligor_index, t):
-        indexes = self.get_indexes_including(obligor_index)
+    def tot_gamma(self, t, obligor_index=None, subsets_indexes=None):
+        if obligor_index is None and subsets_indexes is None:
+            raise ValueError("Both obligor_index and subsets_indexes cannot be None at the same time")
+
+        indexes = self.get_indexes_including(obligor_index) if obligor_index is not None else subsets_indexes
         models = self.models[indexes]
 
         gamma = 0.
