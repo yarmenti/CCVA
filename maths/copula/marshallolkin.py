@@ -114,7 +114,7 @@ class MarshallOlkinCopula(object):
         return subsets, lambdas
 
 
-class StepWiseIntensitiesMarshallOlkinCopula(MarshallOlkinCopula):
+class StepWiseIntensitiesMarshallOlkinCopula(object):
     __max_tau = 1000
 
     def __init__(self, subsets, hazard_rates, pillars):
