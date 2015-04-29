@@ -2,7 +2,6 @@ import numpy as np
 
 
 class Accounts(object):
-    __states = None
 
     def __init__(self, states, derivatives_nb):
         self.states = states
