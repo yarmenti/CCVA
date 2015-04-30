@@ -2,7 +2,6 @@ import numpy as np
 
 
 class Accounts(object):
-    __states = None
 
     def __init__(self, states, derivatives_nb):
         self.states = states
@@ -43,7 +42,8 @@ class Accounts(object):
 
 class DFAccounts(Accounts):
     def __filtered_default_fund(self, only_surviving):
-        indexes = np.arange(self.amounts.shape[1] - 1)
+        indexes = np.arange(self.amounts.shape[0])
+
         if only_surviving:
             indexes = indexes[self.states.alive_states]
 

@@ -133,3 +133,77 @@ class RegulatoryCapital(object):
         discount = (1.-np.exp(-0.05*m_i))/(0.05*m_i)
 
         return mult*sqrt_h*w_i*m_i*discount*ead_i[0]
+
+
+class CCPRegulatoryCapital(object):
+    capital_ratio = 0.08
+
+    def __init__(self, vm_accounts, im_accounts, df_accounts, sig, beta, portfolio, risk_weight=0.2):
+        cm_nb = df_accounts.size
+
+        self.__vm_acc = vm_accounts
+        self.__im_acc = im_accounts
+        self.__df_acc = df_accounts
+
+        self.__eqty = sig
+        self.__coeff = 1 + (beta * cm_nb / (cm_nb - 2))
+        self.__port = portfolio
+
+        self.__risk_weight = risk_weight
+
+    def __compute_eads(self, t, risk_horizon, conf_level, **kwargs):
+        exposures = self.__port.compute_exposure(t, risk_period=risk_horizon, conf_level=conf_level, **kwargs)
+        agg_exposures = np.sum(exposures, axis=1)
+
+        vm = np.sum(self.__vm_acc.amounts, axis=1)
+        im = np.sum(self.__im_acc.amounts, axis=1)
+        df = np.sum(self.__df_acc.amounts, axis=1)
+
+        zeros = np.zeros(agg_exposures.shape)
+
+        return np.maximum(agg_exposures - vm - im - df, zeros)
+
+    def __compute_kcms(self, k_ccp):
+        e = self.__eqty.value
+        df_tot = self.__df_acc.total_default_fund().sum()
+        df_prime_cm = np.maximum(df_tot - 2*self.__df_acc.mean_contribution().sum(), 0)
+        df_prime = e + df_prime_cm
+
+        c1 = 0.0016
+        if df_prime > 0:
+            c1 = np.maximum(0.0016, 0.016*(k_ccp/df_prime)**0.3)
+
+        c2 = 1.0
+        mu = 1.2
+
+        res = 0.
+        if df_prime < k_ccp:
+            res = c2 * (mu*(k_ccp-df_prime) + df_prime_cm)
+        elif e < k_ccp < df_prime:
+            res = c2*(k_ccp-e) + c1*(df_prime-k_ccp)
+        elif k_ccp <= e:
+            res = c1*df_prime_cm
+
+        return res
+
+    def __compute_k_ccp(self, t, risk_horizon, conf_level, **kwargs):
+        risk_weight = self.__risk_weight
+        eads = self.__compute_eads(t, risk_horizon, conf_level, **kwargs)
+
+        states = self.__im_acc.states
+        alive_eads = eads[states.alive_states]
+
+        return risk_weight * self.capital_ratio * alive_eads.sum()
+
+    def compute_kcm(self, clearing_member_index, t, risk_horizon=1., conf_level=0.999, **kwargs):
+        total_df = self.__df_acc.total_default_fund().sum()
+        if total_df <= 0:
+            raise RuntimeError("The total default fund must be > 0")
+
+        df = self.__df_acc.get_amount(clearing_member_index).sum()
+        ratio_df = df / total_df
+
+        k_ccp = self.__compute_k_ccp(t, risk_horizon, conf_level, **kwargs)
+        k_cms = self.__compute_kcms(k_ccp)
+
+        return self.__coeff * ratio_df * k_cms

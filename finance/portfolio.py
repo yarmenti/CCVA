@@ -14,17 +14,16 @@ class Portfolio(object):
 
 
     @staticmethod
-    def generate_1_vs_all_positions(alone_index, positive_single_pos_sgn, obligors_nb):
-        if alone_index >= obligors_nb:
-            raise ValueError("alone_index = %s must be leq than "
-                             "obligors_nb = %s"%(alone_index, obligors_nb))
-
+    def generate_1_vs_all_positions(alone_index, all_contributing_indexes, total_nb, positive_single_pos_sgn=True):
         sgn = 1. if positive_single_pos_sgn else -1.
 
-        weights = -sgn/(obligors_nb-1)
-        res = np.empty(obligors_nb)
-        res.fill(weights)
-        res[alone_index] = sgn
+        weight = -sgn/(len(all_contributing_indexes)-1)
+        res = np.zeros(total_nb)
+
+        for o in all_contributing_indexes:
+            res[o] = weight
+
+        res[alone_index] = 1.
 
         return res
 
@@ -53,6 +52,8 @@ class Portfolio(object):
     def __init_new_positions(self):
         self.__notionals = np.absolute(self.__positions)
         amounts = self.notionals.sum(axis=1)
+        amounts[amounts == 0.] = 1.
+
         self.__weights = (self.notionals.T / amounts).T
         self.__directions = np.sign(self.__positions)
 
@@ -179,5 +180,5 @@ class EquilibratedPortfolio(Portfolio):
 
 class CCPPortfolio(EquilibratedPortfolio):
     def __init__(self, members_positions_mat, derivatives, exposures):
-        ccp_positions = -members_positions_mat
+        ccp_positions = -np.array(members_positions_mat)
         super(CCPPortfolio, self).__init__(ccp_positions, derivatives, exposures)
