@@ -8,13 +8,13 @@ from maths.montecarlo.processes.historical import HistoricalProcess
 
 class Exposure(object):
     __metaclass__ = ABCMeta
-    
+
     def __init__(self, risk_period):
         self._risk_period_ = risk_period
 
     @abstractmethod
     def __call__(self, **kwargs):
-        pass
+        raise NotImplementedError()
 
 
 class EuropeanQuantilExposure(Exposure):
@@ -61,7 +61,7 @@ class EuropeanQuantilExposure(Exposure):
         pillars = np.unique(np.append(self.__contract.pillars[:lst_pill_idx], [t, t_ph]))
         pillars.sort()
 
-        process_values = self.__compute_diff(t, pillars, drift, vol, quantile_inv)
+        process_values = self._compute_diff(t, pillars, drift, vol, quantile_inv)
 
         tmp_underlying = self.__contract.underlying
         values = np.tile(process_values, (self.__contract.underlying.dimension, 1))
@@ -97,7 +97,8 @@ class EuropeanQuantileBrownianExposure(EuropeanQuantilExposure):
 
         return process_values
 
-class EuropeanQuantileGeomBrownianExposure(Exposure):
+
+class EuropeanQuantileGeomBrownianExposure(EuropeanQuantilExposure):
     def _compute_diff(self, t, pillars, drift, vol, quantile_inv):
         d = drift - .5*vol**2
 
@@ -113,5 +114,5 @@ class EuropeanQuantileGeomBrownianExposure(Exposure):
 
         return process_values
 
-Exposure.register(EuropeanQuantileBrownianExposure)
-Exposure.register(EuropeanQuantileGeomBrownianExposure)
+EuropeanQuantilExposure.register(EuropeanQuantileBrownianExposure)
+EuropeanQuantilExposure.register(EuropeanQuantileGeomBrownianExposure)
