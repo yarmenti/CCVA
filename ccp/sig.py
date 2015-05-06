@@ -1,7 +1,8 @@
+from __builtin__ import property
 import numpy as np
 
 
-class SkinInTheGame(object):
+class ConstantSkinInTheGame(object):
     def __init__(self, initial_value):
         assert (initial_value >= 0), "The initial value is not positive"
         self.__init_val = initial_value
@@ -19,3 +20,34 @@ class SkinInTheGame(object):
     
     def recover(self, val=None):
         self.__val = self.__init_val if val is None else val
+
+
+class SkinInTheGame(object):
+    def __init__(self, initial_value=0., ratio=0.25):
+        if initial_value < 0:
+            raise ValueError("The initial_value must be non negative.")
+
+        self.__val = initial_value
+        self.__init_val = initial_value
+
+        self.__ratio = ratio
+
+    def update_value(self, t, **kwargs):
+        regul_capital = kwargs.pop("regul_capital")
+        risk_horizon = kwargs.pop("risk_horizon")
+        conf_level = kwargs.pop("conf_level")
+
+        self.__val = regul_capital.compute_k_ccp(t, risk_horizon, conf_level, **kwargs)*self.__ratio
+
+    def handle_breach(self, breach):
+        jump = -np.minimum(breach, self.__val)
+        self.__val += jump
+        self.__val = np.maximum(self.__val, 0)
+        return breach + jump
+
+    def recover(self, val=None):
+        self.__val = self.__init_val if val is None else val
+
+    @property
+    def value(self):
+        return self.__val

@@ -2,22 +2,14 @@ from abc import ABCMeta, abstractmethod
 
 from scipy.stats import norm
 import numpy as np
+from maths.montecarlo.processes.brownianmotions import BrownianMotion, GeometricBrownianMotion
 
 from maths.montecarlo.processes.historical import HistoricalProcess
 
 
-class Exposure(object):
+class EuropeanQuantilExposure(object):
     __metaclass__ = ABCMeta
 
-    def __init__(self, risk_period):
-        self._risk_period_ = risk_period
-
-    @abstractmethod
-    def __call__(self, **kwargs):
-        raise NotImplementedError()
-
-
-class EuropeanQuantilExposure(Exposure):
     def __init__(self, european_contract, df, drift, vol):
         if isinstance(vol, (list, np.ndarray)):
             if len(vol) != 1:
@@ -31,8 +23,8 @@ class EuropeanQuantilExposure(Exposure):
             drift = drift[0]
         self.__drift = drift
 
-        self.__df = df
         self.__contract = european_contract
+        self.__discount = df
 
     def __call__(self, **kwargs):
         t = kwargs['t']
@@ -65,13 +57,17 @@ class EuropeanQuantilExposure(Exposure):
 
         tmp_underlying = self.__contract.underlying
         values = np.tile(process_values, (self.__contract.underlying.dimension, 1))
+
         self.__contract.underlying = HistoricalProcess(pillars, values)
-
         result = self.__contract.p_and_l(t, t_ph)
-
         self.__contract.underlying = tmp_underlying
 
-        return result
+        coupon_pym_dates = [p for p in self.__contract.pillars if t < p < t_ph]
+        to_add = 0.
+        for p in coupon_pym_dates:
+            to_add += self.__discount(p)/self.__discount(t_ph) * self.contract.coupon(p)
+
+        return result + to_add
 
     @abstractmethod
     def _compute_diff(self, t, pillars, drift, vol, quantile_inv):
@@ -81,16 +77,22 @@ class EuropeanQuantilExposure(Exposure):
     def contract(self):
         return self.__contract
 
+    @property
+    def discount(self):
+        return self.__discount
+
 
 class EuropeanQuantileBrownianExposure(EuropeanQuantilExposure):
-
     def _compute_diff(self, t, pillars, drift, vol, quantile_inv):
         process_values = []
         for t_ in pillars:
             if t_ <= t:
                 St_ = self.contract.S(t_)
             else:
-                St_ = St_ + drift*(t_-t__) + vol*np.sqrt(t_-t__)*quantile_inv
+                if t_ in self.contract.pillars:
+                    St_ = self.discount(t__)/self.discount(t_) * St_
+                else:
+                    St_ = BrownianMotion.compute_next_value(St_, drift, vol, t_-t__, quantile_inv)
 
             process_values.append(St_)
             t__ = t_
@@ -107,12 +109,16 @@ class EuropeanQuantileGeomBrownianExposure(EuropeanQuantilExposure):
             if t_ <= t:
                 St_ = self.contract.S(t_)
             else:
-                St_ = St_*np.exp(d*(t_-t__) + vol*np.sqrt(t_-t__)*quantile_inv)
+                if t_ in self.contract.pillars:
+                    St_ = self.discount(t__)/self.discount(t_) * St_
+                else:
+                    St_ = GeometricBrownianMotion.compute_next_value(St_, drift, vol, t_-t__, quantile_inv)[0, 0]
 
             process_values.append(St_)
             t__ = t_
 
         return process_values
+
 
 EuropeanQuantilExposure.register(EuropeanQuantileBrownianExposure)
 EuropeanQuantilExposure.register(EuropeanQuantileGeomBrownianExposure)

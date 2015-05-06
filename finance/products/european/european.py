@@ -35,16 +35,20 @@ class EuropeanContract(object):
         if t1 < self.__mat < t2:
             t2 = self.__mat
         
-        return self.price(t2) - self.price(t1)     
-    
-    @property
-    def pillars(self):
-        return np.array([0., self.maturity], copy=True)
-    
+        return self.price(t2) - self.price(t1)
+
+    @abstractmethod
+    def coupon(self, t):
+        return 0.
+
     @abstractmethod
     def price(self, t):
         pass
-    
+
+    @property
+    def pillars(self):
+        return np.array([0., self.maturity], copy=True)
+
     @property
     def maturity(self):
         return self.__mat

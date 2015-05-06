@@ -13,7 +13,10 @@ class FutureContract(EuropeanContract):
         st = self.S(t)
         res = self.discount_factor(t) / self._df_mat_ * st
         return res
-    
+
+    def coupon(self, t):
+        raise NotImplementedError("To do")
+
     def __str__(self):
         return "Future contract of maturity T = %d years over S^%d"%(self.maturity, self.underlying_index)
     
