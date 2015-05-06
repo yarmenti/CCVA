@@ -7,10 +7,10 @@ from abc import ABCMeta, abstractmethod
 class Process(object):
     __metaclass__ = ABCMeta
 
-    __values = None
-    __time = None
-
     def __init__(self, time_arr, x_0):
+        self.__values = None
+        self.__time = None
+
         if isinstance(x_0, list):
             x_0 = np.array(x_0, copy=True)
 

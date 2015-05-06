@@ -93,6 +93,17 @@ class BrownianMotion(Process):
         vals = np.cumsum(np.hstack((self._x0, dXt)), 1)
         self.values = vals
 
+    @staticmethod
+    def compute_next_value(current, drift, vol, delta_t, gaussian_rv):
+        dim = 1 if isinstance(current, float) else current.shape[0]
+        delta_time = np.tile(delta_t, (dim, 1))
+        sqrt_delta_time = np.sqrt(delta_time)
+
+        dXt = np.multiply(drift, delta_time)
+        dXt += np.multiply(np.multiply(vol, sqrt_delta_time), gaussian_rv)
+
+        return current + dXt
+
 Process.register(BrownianMotion)
 
 
@@ -109,5 +120,21 @@ class GeometricBrownianMotion(BrownianMotion):
         dXt = np.exp(dlogXt)
 
         self.values = np.cumprod(np.hstack((self._x0, dXt)), 1)
+
+    @staticmethod
+    def compute_next_value(current, drift, vol, delta_t, gaussian_rv):
+        dim = 1 if isinstance(current, float) else current.shape[0]
+        delta_time = np.tile(delta_t, (dim, 1))
+        sqrt_delta_time = np.sqrt(delta_time)
+
+        log_vol = np.multiply(vol, np.multiply(gaussian_rv, sqrt_delta_time))
+        vol2 = np.square(vol)
+
+        log_drift = np.multiply(drift - 0.5*vol2, delta_time)
+
+        dlogXt = log_drift + log_vol
+        dXt = np.exp(dlogXt)
+
+        return np.multiply(current, dXt)
 
 Process.register(GeometricBrownianMotion)

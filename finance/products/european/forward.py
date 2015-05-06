@@ -19,7 +19,10 @@ class ForwardContract(EuropeanContract):
     @property
     def strike(self):
         return self.__k
-        
+
+    def coupon(self, t):
+        raise NotImplementedError("To do")
+
     def __str__(self):
         return "Forward contract of strike K = %d and maturity T = %d years over S^%d"\
                %(self.strike, self.maturity, self.underlying_index)

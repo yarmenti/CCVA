@@ -26,7 +26,7 @@ class SwapContract(EuropeanContract):
         
     @property
     def pillars(self):
-        return self.__pills
+        return np.array(self.__pills, copy=True)
     
     def compute_strike(self, t):
         den = np.dot(self.__delta_pills, self.__discounted_pills[1:])
@@ -66,29 +66,18 @@ class SwapContract(EuropeanContract):
         pill = ("{" + ', '.join(['%.2f']*len(self.pillars))+"}")%tuple(self.pillars)
         return "Swap contract of maturity T = %d years, over S^%d with strike K = %.3f, paying at %s" \
                %(self.maturity, self.underlying_index, self.strike, pill)
-    
-    def __additional_points_subprocess__(self, **kwargs):
-        t = kwargs['t']
-        t_ph = kwargs['t_ph']
-        
-        last_pill_idx = np.searchsorted(self.pillars, t) - 1
-        last_pill = self.pillars[last_pill_idx]
-        tmp = {last_pill: self.S(last_pill)}
 
-        special_pill_i = (t < self.__pills) & (self.__pills <= t_ph)
-        if special_pill_i.any():
-            special_pills = self.__pills[special_pill_i]
-                        
-            time = [t, t_ph]
-            
-            current = kwargs['current']
-            s = [current[t], current[t_ph]]
+    def coupon(self, t):
+        if t not in self.__pills:
+            return 0.
 
-            f = interpolate.interp1d(time, s)
-            tmp.update({t_: f(t_) for t_ in special_pills})
-                
-        return tmp
-    
+        index = np.searchsorted(self.__pills, t)
+
+        coupon = self.S(self.__pills[index - 1]) - self.strike
+        coupon *= self.__delta_pills[index - 1]
+
+        return coupon
+
     @classmethod
     def generate_payment_dates(cls, first_date, maturity, step):
         res = np.arange(first_date, maturity+step, step)
