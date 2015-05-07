@@ -112,7 +112,7 @@ class RegulatoryCapital(object):
     def __compute_ead(self, counterparty_index, t, risk_horizon, conf_level, **kwargs):
         projection = self.__port.compute_projection(self.__bank_idx, counterparty_index)
 
-        losses = self._compute_potential_future_loss(t, risk_horizon, conf_level, **kwargs)
+        losses = kwargs["pf_losses"] if "pf_losses" in kwargs else self._compute_potential_future_loss(t, risk_horizon, conf_level, **kwargs)
         losses = losses[self.__bank_idx, :]
         losses = np.multiply(losses, projection)
 
@@ -284,6 +284,9 @@ class CCPRegulatoryCapital2012(RegulatoryCapital):
 
 
 class CCPRegulatoryCapital2014(CCPRegulatoryCapital2012):
+    def __init__(self, vm_accounts, im_accounts, df_accounts, sig, portfolio, exposures, risk_weight=0.2):
+        super(CCPRegulatoryCapital2014, self).__init__(vm_accounts, im_accounts, df_accounts, sig, 0., portfolio, exposures, risk_weight)
+
     def compute_kcm(self, clearing_member_index, t, risk_horizon=1., conf_level=0.999, **kwargs):
         total_df = self.df_account.total_default_fund().sum() + self.sig.value
         if total_df <= 0:

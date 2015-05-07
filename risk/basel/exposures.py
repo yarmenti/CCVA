@@ -28,7 +28,7 @@ class AbsEuropeanBaselExposure(BaselExposure):
         t = kwargs.pop('t')
 
         risk_horizon = kwargs['risk_horizon']
-        if t+risk_horizon> self.contract.maturity:
+        if t+risk_horizon > self.contract.maturity:
             risk_horizon = self.contract.maturity - t
 
         risk_period = kwargs['risk_period']
@@ -36,37 +36,19 @@ class AbsEuropeanBaselExposure(BaselExposure):
         alpha = kwargs['conf_level']
         conf_level = [alpha, 1.-alpha]
 
-        #conf_level = kwargs['conf_level']
-        #quantile_inv = norm.ppf(conf_level)
-
-        #time_grid = self.contract.underlying.time
-        #time_grid = time_grid[(t <= time_grid) & (time_grid <= t+risk_horizon)]
-
-        # process = self._simulate_process(t, time_grid, quantile_inv, **kwargs)
-        # old_udl = self.contract.underlying
-        # self.contract.underlying = process
-        #
-        # time_grid = process.time[process.time >= t]
-        #
-        # res = 0.
-        # for t_ in time_grid:
-        #     t_ph = t_ + risk_period
-        #     t_ph = time_offseter(t_ph, time_grid, time_grid[-1])
-        #
-        #     tmp = self.contract.p_and_l(t_, t_ph)
-        #
-        #     if tmp >= res:
-        #         res = tmp
-        #
-        # self.contract.underlying = old_udl
-        #
-        # self.process = process
-
         self.processes = []
 
         time_grid = self.contract.underlying.time
-        time_grid = time_grid[(t <= time_grid) & (time_grid <= t+risk_horizon)]
+        if risk_horizon < 0:
+            tph = time_offseter(t+risk_period, time_grid, time_grid[-1])
+            keep_pills = self.contract.pillars[t <= self.contract.pillars]
+            keep_pills = keep_pills[keep_pills <= tph]
+            time_grid = np.append(keep_pills, [t, tph])
+            time_grid.sort()
+        else:
+            time_grid = time_grid[(t <= time_grid) & (time_grid <= t+risk_horizon)]
 
+        time_grid = np.unique(time_grid)
         old_udl = self.contract.underlying
 
         res = np.zeros([2])
@@ -80,14 +62,12 @@ class AbsEuropeanBaselExposure(BaselExposure):
             for t_ in time_grid_:
                 t_ph = time_offseter(t_+risk_period, time_grid, time_grid[-1])
                 tmp = self.contract.p_and_l(t_, t_ph)
-
-                if tmp >= res[i]:
+                if abs(tmp) >= abs(res[i]):
                     res[i] = tmp
 
             self.processes.append(process)
 
         self.contract.underlying = old_udl
-
         return res
 
     @abstractmethod
