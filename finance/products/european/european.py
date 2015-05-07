@@ -1,14 +1,15 @@
-from abc import ABCMeta, abstractmethod
+from abc import ABCMeta, abstractmethod, abstractproperty
 
 import numpy as np
 
 from maths.montecarlo.processes.base import Process
 from finance.discountfactor import DiscountFactor
+from enum import Enum
 
 
 class EuropeanContract(object):
     __metaclass__ = ABCMeta
-    
+
     def __init__(self, underlying_path, maturity, df_process, underlying_index):
         if not isinstance(underlying_path, Process):
             raise ValueError("The underlying must be of type Path")
@@ -36,6 +37,10 @@ class EuropeanContract(object):
             t2 = self.__mat
         
         return self.price(t2) - self.price(t1)
+
+    @abstractproperty
+    def asset_class(self):
+        pass
 
     @abstractmethod
     def coupon(self, t):
@@ -68,3 +73,14 @@ class EuropeanContract(object):
     @property
     def underlying_index(self):
         return self.__udlyg_idx
+
+
+class ContractType(Enum):
+    interest_rate = 1
+    curr_rates = 2
+    gold = 3
+    equity = 4
+    precious_metal = 5
+    ig_cds = 6
+    nig_cds = 7
+    other = 8

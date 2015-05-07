@@ -1,4 +1,4 @@
-from .european import EuropeanContract
+from .european import EuropeanContract, ContractType
 
 
 class FutureContract(EuropeanContract):
@@ -16,6 +16,10 @@ class FutureContract(EuropeanContract):
 
     def coupon(self, t):
         raise NotImplementedError("To do")
+
+    @property
+    def asset_class(self):
+        return ContractType.equity
 
     def __str__(self):
         return "Future contract of maturity T = %d years over S^%d"%(self.maturity, self.underlying_index)

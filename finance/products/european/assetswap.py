@@ -1,7 +1,7 @@
 import numpy as np
 from scipy import interpolate
 
-from .european import EuropeanContract
+from .european import EuropeanContract, ContractType
 
 
 class SwapContract(EuropeanContract):
@@ -27,7 +27,11 @@ class SwapContract(EuropeanContract):
     @property
     def pillars(self):
         return np.array(self.__pills, copy=True)
-    
+
+    @property
+    def asset_class(self):
+        return ContractType.interest_rate
+
     def compute_strike(self, t):
         den = np.dot(self.__delta_pills, self.__discounted_pills[1:])
         

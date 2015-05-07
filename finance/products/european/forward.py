@@ -1,4 +1,4 @@
-from .european import EuropeanContract
+from .european import EuropeanContract, ContractType
 
 
 class ForwardContract(EuropeanContract):
@@ -19,6 +19,10 @@ class ForwardContract(EuropeanContract):
     @property
     def strike(self):
         return self.__k
+
+    @property
+    def asset_class(self):
+        return ContractType.equity
 
     def coupon(self, t):
         raise NotImplementedError("To do")
