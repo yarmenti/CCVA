@@ -210,7 +210,7 @@ class CCPRegulatoryCapital2012(RegulatoryCapital):
     #     return np.maximum(agg_exposures - vm - im - df, zeros)
 
     def __compute_eads(self, t, risk_horizon, conf_level, **kwargs):
-        losses = self._compute_potential_future_loss(t, risk_horizon, conf_level, **kwargs)
+        losses = kwargs["pf_losses"] if "pf_losses" in kwargs else self._compute_potential_future_loss(t, risk_horizon, conf_level, **kwargs)
 
         agg_losses = losses.sum(axis=1)
 

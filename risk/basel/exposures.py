@@ -158,13 +158,13 @@ class SABaselExposure(BaselExposure):
     def __call__(self, **kwargs):
         t = kwargs.pop('t')
 
-        res = np.zeros((self.__port.bank_numbers, 1))
+        res = np.zeros(self.__port.positions.shape)
         for i, d in enumerate(self.__port.derivatives):
             ttm = d.maturity - t
             index = self.__residual_maturity(ttm)
             mult_coeff = self.__mapping[d.asset_class][index] * self.__mult
 
-            res[:, i] += mult_coeff * self.__port.notionals[:, i]
+            res[:, i] = mult_coeff * self.__port.notionals[:, i]
 
         return res
 
