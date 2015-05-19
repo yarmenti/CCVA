@@ -23,7 +23,7 @@ class Portfolio(object):
         for o in all_contributing_indexes:
             res[o] = weight
 
-        res[alone_index] = 1.
+        res[alone_index] = sgn
 
         return res
 
@@ -128,6 +128,7 @@ class Portfolio(object):
 
     def compute_projection(self, from_, towards_):
         raise NotImplementedError("Must be implemented in a subclass")
+
 
 class EquilibratedPortfolio(Portfolio):
     __weights_asset = None
