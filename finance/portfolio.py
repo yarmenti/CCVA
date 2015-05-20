@@ -126,14 +126,16 @@ class Portfolio(object):
 
         return exposures
 
+    # def _filter(self, exposures, **kwargs):
+    #     raise NotImplementedError("Must be implemented in a subclass")
+
     def compute_projection(self, from_, towards_):
         raise NotImplementedError("Must be implemented in a subclass")
 
 
 class EquilibratedPortfolio(Portfolio):
-    __weights_asset = None
-
     def __init__(self, matrix_positions, derivatives, exposures):
+        self.__weights_asset = None
         mat = matrix_positions if isinstance(matrix_positions, np.ndarray) else np.array(matrix_positions)
 
         sum_col = mat.sum(axis=0)
@@ -154,8 +156,8 @@ class EquilibratedPortfolio(Portfolio):
         self.__weights_asset = np.zeros(self.positions.shape)
         for ii in range(self.__weights_asset.shape[1]):
             col = self.positions[:, ii]
-            pos_idx = col>0
-            neg_idx = col<0
+            pos_idx = col > 0
+            neg_idx = col < 0
             pos = float(np.array(col[pos_idx]).sum())
 
             self.__weights_asset[:, ii][pos_idx] = col[pos_idx] / pos
@@ -176,7 +178,72 @@ class EquilibratedPortfolio(Portfolio):
             if p >= 0:
                 w_towards[i] = 0.
 
-        return np.absolute(w_towards)
+        res = np.absolute(w_towards)
+        return res
+
+    # def _filter(self, exposures, **kwargs):
+    #     exposures = exposures[kwargs['from_'], :]
+    #     if 'towards_' in kwargs:
+    #         projection = self.compute_projection(kwargs['from_'], kwargs['towards_'])
+    #         exposures = np.multiply(exposures, projection)
+    #         if kwargs.get('total', False):
+    #             exposures = exposures.sum()
+    #
+    #     return exposures
+
+
+class OneViewPortfolio(Portfolio):
+    def __init__(self, pov_index, matrix_positions, derivatives, exposures):
+        self.__pov_idx = pov_index
+        mat = matrix_positions if isinstance(matrix_positions, np.ndarray) else np.array(matrix_positions)
+
+        mat = np.divide(mat, -mat[pov_index])
+
+        sum_col = mat.sum(axis=0)
+        for (i, sum_) in enumerate(sum_col):
+            if sum_ > sys.float_info.epsilon:
+                raise ValueError("The total portfolio composition is not neutral "
+                                 "for index = %i, sum=%s"%(i, sum_))
+
+        super(OneViewPortfolio, self).__init__(matrix_positions, derivatives, exposures)
+
+    def compute_exposure(self, t, **kwargs):
+        if "from_" not in kwargs:
+            raise ValueError("from_ is necessary in **kwargs.")
+
+        multiplier = 1. if kwargs["from_"] == self.__pov_idx else -1.
+
+        towards_weights = self.positions
+        if "towards_" in kwargs and kwargs["towards_"] == self.__pov_idx:
+            return np.zeros(self.positions.shape[1])
+
+        mod_towards_weights = multiplier * towards_weights
+
+        directions = [1, -1]
+        exposures = np.zeros(self.positions.shape)
+        for (ii, e) in enumerate(self.exposures):
+            exposure = e(t=t, **kwargs)
+            for d, exp in zip(directions, exposure):
+                temp = np.sign(mod_towards_weights[:, ii]) == d
+                exposures[temp, ii] = np.maximum(mod_towards_weights[temp, ii] * exp, 0)
+
+        if "towards_" in kwargs:
+            exposures = exposures[kwargs["towards_"]]
+
+        return exposures
+
+    def compute_projection(self, from_, towards_):
+        if from_ != self.__pov_idx:
+            #return self.positions[towards_, :]
+            raise ValueError("from_ (%s) != self.__pov_index (%s)"%(from_, self.__pov_idx))
+
+        if towards_ >= self.bank_numbers:
+            raise ValueError("The indexes must be less than %s"%self.bank_numbers)
+
+        if from_ == towards_:
+            return np.zeros(self.positions.shape[1])
+
+        return np.ones(self.positions.shape[1])
 
 
 class CCPPortfolio(EquilibratedPortfolio):

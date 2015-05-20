@@ -64,7 +64,8 @@ class SwapContract(EuropeanContract):
         term2 = np.dot(deltas, self.__discounted_pills[fst_payment_idx + 1:])
         term2 *= -self.__k/df_t
 
-        return first_coupon + term1 + term2
+        #return first_coupon + term1 + term2
+        return term1 + term2
       
     def __str__(self):
         pill = ("{" + ', '.join(['%.2f']*len(self.pillars))+"}")%tuple(self.pillars)

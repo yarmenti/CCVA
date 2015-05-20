@@ -34,8 +34,12 @@ class SkinInTheGame(object):
 
     def update_value(self, t, **kwargs):
         regul_capital = kwargs.pop("regul_capital")
-        risk_horizon = kwargs.pop("risk_horizon")
-        conf_level = kwargs.pop("conf_level")
+        risk_horizon = kwargs.pop("risk_horizon", -1)
+        conf_level = kwargs.pop("conf_level", -1)
+
+        if np.minimum(risk_horizon, conf_level) == -1:
+            if "pf_losses" not in kwargs:
+                raise ValueError("The losses must be present if the risk horizon or conf_level are not.")
 
         self.__val = regul_capital.compute_k_ccp(t, risk_horizon, conf_level, **kwargs)*self.__ratio
 

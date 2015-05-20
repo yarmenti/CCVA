@@ -117,8 +117,12 @@ class RegulatoryCapital(object):
         losses = np.multiply(losses, projection)
 
         loss = losses.sum()
-        vm = self.__vm_acc.amounts[self.__bank_idx].sum()
-        im = self.__im_acc.amounts[self.__bank_idx].sum()
+
+        use_vm = kwargs.pop('use_vm', True)
+        vm = self.__vm_acc.amounts[self.__bank_idx].sum() if use_vm else 0.
+
+        use_im = kwargs.pop('use_im', True)
+        im = self.__im_acc.amounts[self.__bank_idx].sum() if use_im else 0.
 
         ead = np.maximum(loss - vm - im, 0)
 
@@ -214,7 +218,9 @@ class CCPRegulatoryCapital2012(RegulatoryCapital):
 
         agg_losses = losses.sum(axis=1)
 
-        vm = np.sum(self.__vm_acc.amounts, axis=1)
+        use_vm = kwargs.pop("use_vm", True)
+
+        vm = np.sum(self.__vm_acc.amounts, axis=1) if use_vm else 0.
         im = np.sum(self.__im_acc.amounts, axis=1)
         df = np.sum(self.__df_acc.amounts, axis=1)
 
