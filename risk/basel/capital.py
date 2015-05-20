@@ -117,8 +117,8 @@ class RegulatoryCapital(object):
         losses = np.multiply(losses, projection)
 
         loss = losses.sum()
-        vm = self.__vm_acc.amounts[counterparty_index].sum()
-        im = self.__im_acc.amounts[counterparty_index].sum()
+        vm = self.__vm_acc.amounts[self.__bank_idx].sum()
+        im = self.__im_acc.amounts[self.__bank_idx].sum()
 
         ead = np.maximum(loss - vm - im, 0)
 
