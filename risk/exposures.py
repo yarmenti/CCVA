@@ -62,12 +62,13 @@ class EuropeanQuantilExposure(object):
         result = self.__contract.p_and_l(t, t_ph)
         self.__contract.underlying = tmp_underlying
 
-        coupon_pym_dates = [p for p in self.__contract.pillars if t < p < t_ph]
-        to_add = 0.
-        for p in coupon_pym_dates:
-            to_add += self.__discount(p)/self.__discount(t_ph) * self.contract.coupon(p)
+        #coupon_pym_dates = [p for p in self.__contract.pillars if t < p < t_ph]
+        #to_add = 0.
+        #for p in coupon_pym_dates:
+        #    to_add += self.__discount(p)/self.__discount(t_ph) * self.contract.coupon(p)
 
-        return result + to_add
+        #return result + to_add
+        return result
 
     @abstractmethod
     def _compute_diff(self, t, pillars, drift, vol, quantile_inv):
