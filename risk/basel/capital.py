@@ -139,7 +139,7 @@ class CSARegulatoryCapital(object):
 class CCPRegulatoryCapital2012(CSARegulatoryCapital):
     capital_ratio = 0.08
 
-    def __init__(self, vm_accounts, im_accounts, df_accounts, sig, beta, portfolio, exposures, risk_weight=0.2):
+    def __init__(self, vm_accounts, im_accounts, df_accounts, sig, beta, portfolio, risk_weight=0.2):
         cm_nb = df_accounts.size
 
         self.__vm_acc = vm_accounts
@@ -150,16 +150,10 @@ class CCPRegulatoryCapital2012(CSARegulatoryCapital):
         self.__coeff = 1 + (beta * cm_nb / (cm_nb - 2))
         self.__port = portfolio
 
-        if len(exposures) != len(self.__port.derivatives):
-            raise ValueError("The exposures do not have the same length (%s) "
-                             "as the nb of derivatives (%s)"%(len(exposures), len(self.__port.derivatives)))
-
-        self.__exposures = exposures
-
         self.__risk_weight = risk_weight
 
-    def __compute_eads(self, t, risk_horizon, conf_level, **kwargs):
-        losses = kwargs["pf_losses"] if "pf_losses" in kwargs else self._compute_potential_future_loss(t, risk_horizon, conf_level, **kwargs)
+    def __compute_eads(self, **kwargs):
+        losses = kwargs["losses"]
 
         agg_losses = losses.sum(axis=1)
 
@@ -196,15 +190,15 @@ class CCPRegulatoryCapital2012(CSARegulatoryCapital):
 
         return res
 
-    def compute_k_ccp(self, t, risk_horizon, conf_level, **kwargs):
-        eads = self.__compute_eads(t, risk_horizon, conf_level, **kwargs)
+    def compute_k_ccp(self, t, risk_horizon, **kwargs):
+        eads = self.__compute_eads(**kwargs)
 
         states = self.__im_acc.states
         alive_eads = eads[states.alive_states]
 
         return self.__risk_weight * self.capital_ratio * alive_eads.sum()
 
-    def compute_kcm(self, clearing_member_index, t, risk_horizon=1., conf_level=0.999, **kwargs):
+    def compute_kcm(self, clearing_member_index, t, risk_horizon=1., **kwargs):
         total_df = self.__df_acc.total_default_fund().sum()
         if total_df <= 0:
             raise RuntimeError("The total default fund must be > 0")
@@ -212,7 +206,7 @@ class CCPRegulatoryCapital2012(CSARegulatoryCapital):
         df = self.__df_acc.get_amount(clearing_member_index).sum()
         ratio_df = df / total_df
 
-        k_ccp = self.compute_k_ccp(t, risk_horizon, conf_level, **kwargs)
+        k_ccp = self.compute_k_ccp(t, risk_horizon, **kwargs)
         k_cms = self.__compute_kcms(k_ccp)
 
         return self.__coeff * ratio_df * k_cms
@@ -235,8 +229,9 @@ class CCPRegulatoryCapital2012(CSARegulatoryCapital):
 
 
 class CCPRegulatoryCapital2014(CCPRegulatoryCapital2012):
-    def __init__(self, vm_accounts, im_accounts, df_accounts, sig, portfolio, exposures, risk_weight=0.2):
-        super(CCPRegulatoryCapital2014, self).__init__(vm_accounts, im_accounts, df_accounts, sig, 0., portfolio, exposures, risk_weight)
+    def __init__(self, vm_accounts, im_accounts, df_accounts, sig, portfolio, risk_weight=0.2):
+        super(CCPRegulatoryCapital2014, self).__init__(vm_accounts, im_accounts, \
+                                                       df_accounts, sig, 0., portfolio, risk_weight)
 
     def compute_kcm(self, clearing_member_index, t, risk_horizon=1., conf_level=0.999, **kwargs):
         total_df = self.df_account.total_default_fund().sum() + self.sig.value
@@ -245,7 +240,7 @@ class CCPRegulatoryCapital2014(CCPRegulatoryCapital2012):
 
         df = self.df_account.get_amount(clearing_member_index).sum()
 
-        k_ccp = self.compute_k_ccp(t, risk_horizon, conf_level, **kwargs)
+        k_ccp = self.compute_k_ccp(t, risk_horizon, **kwargs)
 
         firt_term = k_ccp * (df/total_df)
         second_term = 0.08*0.02*df

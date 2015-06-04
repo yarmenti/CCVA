@@ -7,7 +7,10 @@ class ConstantSkinInTheGame(object):
         assert (initial_value >= 0), "The initial value is not positive"
         self.__init_val = initial_value
         self.__val = initial_value
-        
+
+    def update_value(self, t, **kwargs):
+        pass
+
     def handle_breach(self, breach):
         jump = -np.minimum(breach, self.__val)
         self.__val += jump

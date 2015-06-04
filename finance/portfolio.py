@@ -143,7 +143,7 @@ class CSAPortfolio(AbsPortfolio):
     def compute_value(self, t, **kwargs):
         prices = np.array([d.price(t) for d in self.derivatives])
 
-        pov_index = kwargs["from_"]
+        pov_index = kwargs.get("from_", None)
         mod_positions = self._compute_positions_matrix(pov_index)
 
         #. by notional
@@ -172,5 +172,20 @@ class CSAPortfolio(AbsPortfolio):
         exposures = self._project_result(exposures, **kwargs)
 
         return exposures
+
+
+class CCPPortfolio(CSAPortfolio):
+    def __init__(self, matrix_positions, derivatives_notionals, derivatives, exposures):
+        mat = matrix_positions if isinstance(matrix_positions, np.ndarray) else np.array(matrix_positions)
+        super(CCPPortfolio, self).__init__(-mat, derivatives_notionals, derivatives, exposures, None)
+
+    def _compute_positions_matrix(self, pov_index):
+        return self.positions
+
+    def _project_result(self, result, **kwargs):
+        if "towards_" in kwargs:
+            result = result[kwargs["towards_"]]
+
+        return result
 
 AbsPortfolio.register(CSAPortfolio)
