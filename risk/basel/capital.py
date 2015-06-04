@@ -2,7 +2,7 @@ import numpy as np
 from scipy.stats import norm
 
 
-class RegulatoryCapital(object):
+class CSARegulatoryCapital(object):
     __systemic_factor = norm.ppf(0.999)
     __min_pd = 0.0003
     __beta_exposure = 1.4
@@ -14,25 +14,21 @@ class RegulatoryCapital(object):
                                     "BBB": 1.0, "BB": 2.0, "B": 3.0,
                                     "CCC": 10.0, "CC": 15.0}
 
-    def __init__(self, vm_accounts, im_accounts, portfolio, default_proba, recoveries, exposures, bank_index=0, cap_ratio=0.08):
+    def __init__(self, vm_accounts, im_accounts, portfolio, default_proba, recoveries, bank_index, cap_ratio=0.08):
         self.__cap_ratio = cap_ratio
         self.__bank_idx = bank_index
         self.__port = portfolio
         self.__im_acc = im_accounts
         self.__vm_acc = vm_accounts
 
-        if self.__port.bank_numbers != len(default_proba):
+        if self.__port.counterparties_number != len(default_proba):
             raise ValueError("The portfolio.nb_banks (%s) "
                              "!= len(default_proba) (%s)"%(self.__port.bank_numbers, len(default_proba)))
         self.__default_probs = default_proba
 
-        if self.__port.bank_numbers != len(recoveries):
+        if self.__port.counterparties_number != len(recoveries):
             raise ValueError("The portfolio.nb_banks != len(recoveries)")
         self.__recoveries = recoveries
-
-        if len(self.__port.derivatives) != len(exposures):
-            raise ValueError("The len(portfolio.derivatives) != len(exposures)")
-        self.__exposures = exposures
 
     @classmethod
     def __b(cls, x):
@@ -68,10 +64,9 @@ class RegulatoryCapital(object):
         return lgd * (gauss_factor - dp) * coeff
 
     def __compute_effective_mat(self, counterparty_index, t):
-        projection = self.portfolio.compute_projection(self.__bank_idx, counterparty_index)
-        positions = self.portfolio.positions[self.__bank_idx, :]
+        positions = self.portfolio.counterparties_positions_from_bank[counterparty_index, :]
+        notionals = np.multiply(positions, self.portfolio.notionals)
 
-        notionals = np.multiply(projection, positions)
         notional = notionals.sum()
 
         ttm = [d.maturity - t for d in self.__port.derivatives]
@@ -79,42 +74,9 @@ class RegulatoryCapital(object):
 
         return np.minimum(5., np.maximum(1., not_weighted_avg))
 
-    def _compute_potential_future_loss(self, t, risk_horizon, conf_level, **kwargs):
-        directions = [1, -1]
-        losses = np.zeros(self.portfolio.positions.shape)
-        for (ii, e) in enumerate(self.exposures):
-            exposure = e(t=t, risk_horizon=risk_horizon,
-                         conf_level=conf_level, **kwargs)
-
-            for d, exp in zip(directions, exposure):
-                temp = self.portfolio.directions[:, ii] == d
-                losses[:, ii][temp] = np.maximum(self.portfolio.positions[:, ii][temp] * exp, 0)
-
-        return losses
-
-    # def __compute_ead(self, counterparty_index, t, risk_horizon, conf_level, **kwargs):
-    #     exposure = self.__port.compute_exposure(t,
-    #                                             risk_period=risk_horizon,
-    #                                             conf_level=conf_level,
-    #                                             from_=self.__bank_idx,
-    #                                             towards_=counterparty_index,
-    #                                             total=True,
-    #                                             **kwargs
-    #                                             )
-    #
-    #     vm = self.__vm_acc.amounts[counterparty_index]
-    #     im = self.__im_acc.amounts[counterparty_index]
-    #
-    #     ead = np.maximum(exposure - vm - im, 0)
-    #
-    #     return ead
-
-    def __compute_ead(self, counterparty_index, t, risk_horizon, conf_level, **kwargs):
-        projection = self.__port.compute_projection(self.__bank_idx, counterparty_index)
-
-        losses = kwargs["pf_losses"] if "pf_losses" in kwargs else self._compute_potential_future_loss(t, risk_horizon, conf_level, **kwargs)
-        losses = losses[self.__bank_idx, :]
-        losses = np.multiply(losses, projection)
+    def __compute_ead(self, counterparty_index, **kwargs):
+        losses = kwargs["losses"]
+        losses = losses[counterparty_index, :]
 
         loss = losses.sum()
 
@@ -149,22 +111,22 @@ class RegulatoryCapital(object):
 
         return rating
 
-    def compute_kccr(self, counterparty_index, t, risk_horizon=1., conf_level=0.999, **kwargs):
+    def compute_kccr(self, counterparty_index, t, risk_horizon=1., **kwargs):
         w = self.__compute_regulatory_weight(counterparty_index, t, risk_horizon)
 
-        ead = self.__compute_ead(counterparty_index, t, risk_horizon, conf_level, **kwargs)
+        ead = self.__compute_ead(counterparty_index, **kwargs)
         ead *= self.__beta_exposure
 
         return self.__cap_ratio*12.5*ead*w
 
-    def compute_kcva(self, counterparty_index, t, risk_horizon=1., conf_level=0.999, **kwargs):
+    def compute_kcva(self, counterparty_index, t, risk_horizon=1., **kwargs):
         mult = 0.5*2.33
         sqrt_h = np.sqrt(risk_horizon)
 
         w_i = self.__compute_kcva_weight(counterparty_index)
         m_i = self.__compute_effective_mat(counterparty_index, t)
 
-        ead_i = self.__compute_ead(counterparty_index, t, risk_horizon, conf_level, **kwargs)
+        ead_i = self.__compute_ead(counterparty_index, **kwargs)
         discount = (1.-np.exp(-0.05*m_i))/(0.05*m_i)
 
         return mult*sqrt_h*w_i*m_i*discount*ead_i
@@ -173,12 +135,8 @@ class RegulatoryCapital(object):
     def portfolio(self):
         return self.__port
 
-    @property
-    def exposures(self):
-        return self.__exposures
 
-
-class CCPRegulatoryCapital2012(RegulatoryCapital):
+class CCPRegulatoryCapital2012(CSARegulatoryCapital):
     capital_ratio = 0.08
 
     def __init__(self, vm_accounts, im_accounts, df_accounts, sig, beta, portfolio, exposures, risk_weight=0.2):
@@ -199,19 +157,6 @@ class CCPRegulatoryCapital2012(RegulatoryCapital):
         self.__exposures = exposures
 
         self.__risk_weight = risk_weight
-
-    # def __compute_eads(self, t, risk_horizon, conf_level, **kwargs):
-    #     exposures = self.__port.compute_exposure(t, risk_period=risk_horizon, conf_level=conf_level, **kwargs)
-    #
-    #     agg_exposures = np.sum(exposures, axis=1)
-    #
-    #     vm = np.sum(self.__vm_acc.amounts, axis=1)
-    #     im = np.sum(self.__im_acc.amounts, axis=1)
-    #     df = np.sum(self.__df_acc.amounts, axis=1)
-    #
-    #     zeros = np.zeros(agg_exposures.shape)
-    #
-    #     return np.maximum(agg_exposures - vm - im - df, zeros)
 
     def __compute_eads(self, t, risk_horizon, conf_level, **kwargs):
         losses = kwargs["pf_losses"] if "pf_losses" in kwargs else self._compute_potential_future_loss(t, risk_horizon, conf_level, **kwargs)

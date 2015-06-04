@@ -1,40 +1,25 @@
+from abc import abstractmethod, ABCMeta
 import numpy as np
 import sys
 
 
-class Portfolio(object):
-    __positions = None
-    __weights = None
-    __directions = None
+class AbsPortfolio(object):
+    __metaclass__ = ABCMeta
 
-    __notionals = None
-    __nb_der = None
-    __derivatives = None
-    __exposures = None
-
-
-    @staticmethod
-    def generate_1_vs_all_positions(alone_index, all_contributing_indexes, total_nb, positive_single_pos_sgn=True):
-        sgn = 1. if positive_single_pos_sgn else -1.
-
-        weight = -sgn/(len(all_contributing_indexes)-1)
-        res = np.zeros(total_nb)
-
-        for o in all_contributing_indexes:
-            res[o] = weight
-
-        res[alone_index] = sgn
-
-        return res
-
-    def __init__(self, matrix_positions, derivatives, exposures):
+    def __init__(self, matrix_positions, derivatives_notionals, derivatives, exposures):
         self.positions = matrix_positions
+
+        self.notionals = derivatives_notionals
         self.derivatives = derivatives
         self.exposures = exposures
 
     @property
-    def bank_numbers(self):
-        return self.positions.shape[0]
+    def derivatives_number(self):
+        return self.__positions.shape[1]
+
+    @property
+    def counterparties_number(self):
+        return self.__positions.shape[0]
 
     @property
     def positions(self):
@@ -45,29 +30,27 @@ class Portfolio(object):
         val = value if isinstance(value, np.ndarray) else np.array(value)
         if val.ndim != 2:
             raise ValueError("The matrix value is not of dimension 2, given %s"%val.ndim)
+
         self.__positions = val
-        self.__nb_der = self.__positions.shape[1]
-        self.__init_new_positions()
 
-    def __init_new_positions(self):
-        self.__notionals = np.absolute(self.__positions)
-        amounts = self.notionals.sum(axis=1)
-        amounts[amounts == 0.] = 1.
+    def __check_derivatives_nb(self, value):
+        val = value if isinstance(value, np.ndarray) else np.array(value)
+        if val.ndim != 1:
+            raise ValueError("The value is a matrix of dimension %s. It must be an array."%val.ndim)
 
-        self.__weights = (self.notionals.T / amounts).T
-        self.__directions = np.sign(self.__positions)
+        if val.shape[0] != self.derivatives_number:
+            raise ValueError("The value has not the same dimension (%s) of the nb of derivatives %s"%(val.shape[0], self.derivatives_number))
 
-    @property
-    def weights(self):
-        return np.array(self.__weights, copy=True)
+        return val
 
     @property
     def notionals(self):
         return np.array(self.__notionals, copy=True)
 
-    @property
-    def directions(self):
-        return np.array(self.__directions, copy=True)
+    @notionals.setter
+    def notionals(self, value):
+        val = self.__check_derivatives_nb(value)
+        self.__notionals = val
 
     @property
     def derivatives(self):
@@ -75,178 +58,119 @@ class Portfolio(object):
 
     @derivatives.setter
     def derivatives(self, value):
-        der = np.array(value)
-        if der.ndim != 1:
-            raise ValueError("The dimension of the derivatives must be 1, given %s"%der.ndim)
-        if der.size != self.__nb_der:
-            raise ValueError("The derivatives size must be equal to %s, given: %s"%(self.__nb_der, der.size))
-
-        self.__derivatives = der
+        val = self.__check_derivatives_nb(value)
+        self.__derivatives = val
 
     @property
     def exposures(self):
         return np.array(self.__exposures, copy=True)
-    
+
     @exposures.setter
     def exposures(self, value):
-        expos = np.array(value)
-        if expos.ndim != 1:
-            raise ValueError("The dimension of the exposures must be 1, given %s"%expos.ndim)
-        if expos.size != self.__nb_der:
-            raise ValueError("The exposures size must be equal to %s, given: %s"%(self.__nb_der, expos.size))
+        val = self.__check_derivatives_nb(value)
+        self.__exposures = val
 
-        self.__exposures = expos
+    @abstractmethod
+    def compute_value(self, t, **kwargs):
+        pass
 
-    def compute_value(self, derivative_prices, **kwargs):
-        res = np.dot(self.positions, derivative_prices).reshape((self.bank_numbers, 1))
-        if 'from_' in kwargs:
-            res = res[kwargs['from_'], :]
-            if 'towards_' in kwargs:
-                projection = self.compute_projection(kwargs['from_'], kwargs['towards_'])
-                res = np.multiply(res, projection)
-
-        return res
-
+    @abstractmethod
     def compute_exposure(self, t, **kwargs):
-        directions = [1, -1]
-        exposures = np.zeros(self.positions.shape)
-        for (ii, e) in enumerate(self.exposures):
-            exposure = e(t=t, **kwargs)
-            for d, exp in zip(directions, exposure):
-                temp = self.directions[:, ii] == d
-                exposures[:, ii][temp] = np.maximum(self.positions[:, ii][temp] * exp, 0)
-
-        if 'from_' in kwargs:
-            exposures = exposures[kwargs['from_'], :]
-            if 'towards_' in kwargs:
-                projection = self.compute_projection(kwargs['from_'], kwargs['towards_'])
-                exposures = np.multiply(exposures, projection)
-                if kwargs.get('total', False):
-                    exposures = exposures.sum()
-
-        return exposures
-
-    # def _filter(self, exposures, **kwargs):
-    #     raise NotImplementedError("Must be implemented in a subclass")
-
-    def compute_projection(self, from_, towards_):
-        raise NotImplementedError("Must be implemented in a subclass")
+        pass
 
 
-class EquilibratedPortfolio(Portfolio):
-    def __init__(self, matrix_positions, derivatives, exposures):
-        self.__weights_asset = None
+class CSAPortfolio(AbsPortfolio):
+    __directions = [1, -1]
+
+    def __init__(self, matrix_positions, derivatives_notionals, derivatives, exposures, bank_id):
         mat = matrix_positions if isinstance(matrix_positions, np.ndarray) else np.array(matrix_positions)
 
         sum_col = mat.sum(axis=0)
         for (i, sum_) in enumerate(sum_col):
             if sum_ > sys.float_info.epsilon:
                 raise ValueError("The total portfolio composition is not neutral "
-                                 "for index = %i, sum=%s"%(i, sum_))
+                                 "for index = %i, sum=%s" % (i, sum_))
 
-        super(EquilibratedPortfolio, self).__init__(matrix_positions, derivatives, exposures)
+        self.__bank_id = bank_id
+        self.__own_positions = None
+
+        super(CSAPortfolio, self).__init__(matrix_positions, derivatives_notionals, derivatives, exposures)
+
+    def _compute_positions_matrix(self, pov_index):
+        if self.__own_positions is None:
+            positions = self.positions
+            try:
+                mod_positions = np.divide(positions, -positions[self.__bank_id])
+            except RuntimeWarning:
+                zero_position_indexes = np.where(positions[self.__bank_id] == 0)
+                mod_positions[:, zero_position_indexes] = 0.
+
+            self.__own_positions = mod_positions
+
+        res = np.array(self.__own_positions, copy=True)
+        if pov_index != self.__bank_id:
+            res = -res
+
+        return res
 
     @property
-    def positions(self):
-        return super(EquilibratedPortfolio, self).positions
+    def counterparties_positions_from_bank(self):
+        return np.array(self.__own_positions, copy=True)
 
-    @positions.setter
-    def positions(self, value):
-        super(EquilibratedPortfolio, self.__class__).positions.fset(self, value)
-        self.__weights_asset = np.zeros(self.positions.shape)
-        for ii in range(self.__weights_asset.shape[1]):
-            col = self.positions[:, ii]
-            pos_idx = col > 0
-            neg_idx = col < 0
-            pos = float(np.array(col[pos_idx]).sum())
+    def _project_result(self, result, **kwargs):
+        from_ = kwargs["from_"]
+        towards_ = kwargs.get("towards_", None)
 
-            self.__weights_asset[:, ii][pos_idx] = col[pos_idx] / pos
-            self.__weights_asset[:, ii][neg_idx] = col[neg_idx] / pos
+        # Computation of losses towards everyone
+        if towards_ is None:
+            if from_ != self.__bank_id:
+                raise ValueError("Must provide towards keyword.")
+            return result
 
-    def compute_projection(self, from_, towards_):
-        if from_ >= self.bank_numbers or towards_ >= self.bank_numbers:
-            raise ValueError("The indexes must be less than %s"%self.bank_numbers)
+        # Handle the point of view
+        # If different of the bank_id, must take the
+        # values at from_'s point of view.
+        #
+        # In that case, we already multiplied the positions
+        # of all members by -1 in the _compute_positions_matrix method
+        if from_ != self.__bank_id:
+            if towards_ != self.__bank_id:
+                raise ValueError("The point of view has not been set")
+            towards_ = kwargs["from_"]
 
-        if from_ == towards_:
-            return np.zeros(self.__weights_asset.shape[1])
+        return result[towards_]
 
-        w_from = self.__weights_asset[from_, :]
-        w_towards = np.array(self.__weights_asset[towards_, :], copy=True)
+    def compute_value(self, t, **kwargs):
+        prices = np.array([d.price(t) for d in self.derivatives])
 
-        prod = np.multiply(w_from, w_towards)
-        for (i, p) in enumerate(prod):
-            if p >= 0:
-                w_towards[i] = 0.
+        pov_index = kwargs["from_"]
+        mod_positions = self._compute_positions_matrix(pov_index)
 
-        res = np.absolute(w_towards)
-        return res
+        #. by notional
+        mod_positions = np.multiply(mod_positions, self.notionals)
 
-    # def _filter(self, exposures, **kwargs):
-    #     exposures = exposures[kwargs['from_'], :]
-    #     if 'towards_' in kwargs:
-    #         projection = self.compute_projection(kwargs['from_'], kwargs['towards_'])
-    #         exposures = np.multiply(exposures, projection)
-    #         if kwargs.get('total', False):
-    #             exposures = exposures.sum()
-    #
-    #     return exposures
+        #. by prices
+        result = np.multiply(mod_positions, prices)
 
+        result = self._project_result(result, **kwargs)
 
-class OneViewPortfolio(Portfolio):
-    def __init__(self, pov_index, matrix_positions, derivatives, exposures):
-        self.__pov_idx = pov_index
-        mat = matrix_positions if isinstance(matrix_positions, np.ndarray) else np.array(matrix_positions)
-
-        mat = np.divide(mat, -mat[pov_index])
-
-        sum_col = mat.sum(axis=0)
-        for (i, sum_) in enumerate(sum_col):
-            if sum_ > sys.float_info.epsilon:
-                raise ValueError("The total portfolio composition is not neutral "
-                                 "for index = %i, sum=%s"%(i, sum_))
-
-        super(OneViewPortfolio, self).__init__(matrix_positions, derivatives, exposures)
+        return result
 
     def compute_exposure(self, t, **kwargs):
-        if "from_" not in kwargs:
-            raise ValueError("from_ is necessary in **kwargs.")
+        pov_index = kwargs.get("from_", None)
+        mod_positions = self._compute_positions_matrix(pov_index)
 
-        multiplier = 1. if kwargs["from_"] == self.__pov_idx else -1.
-
-        towards_weights = self.positions
-        if "towards_" in kwargs and kwargs["towards_"] == self.__pov_idx:
-            return np.zeros(self.positions.shape[1])
-
-        mod_towards_weights = multiplier * towards_weights
-
-        directions = [1, -1]
         exposures = np.zeros(self.positions.shape)
         for (ii, e) in enumerate(self.exposures):
             exposure = e(t=t, **kwargs)
-            for d, exp in zip(directions, exposure):
-                temp = np.sign(mod_towards_weights[:, ii]) == d
-                exposures[temp, ii] = np.maximum(mod_towards_weights[temp, ii] * exp, 0)
+            for d, exp in zip(self.__directions, exposure):
+                temp = np.sign(mod_positions[:, ii]) == d
+                exposures[temp, ii] = np.maximum(mod_positions[temp, ii] * exp, 0)
 
-        if "towards_" in kwargs:
-            exposures = exposures[kwargs["towards_"]]
+        exposures = np.multiply(exposures, self.notionals)
+
+        exposures = self._project_result(exposures, **kwargs)
 
         return exposures
 
-    def compute_projection(self, from_, towards_):
-        if from_ != self.__pov_idx:
-            #return self.positions[towards_, :]
-            raise ValueError("from_ (%s) != self.__pov_index (%s)"%(from_, self.__pov_idx))
-
-        if towards_ >= self.bank_numbers:
-            raise ValueError("The indexes must be less than %s"%self.bank_numbers)
-
-        if from_ == towards_:
-            return np.zeros(self.positions.shape[1])
-
-        return np.ones(self.positions.shape[1])
-
-
-class CCPPortfolio(EquilibratedPortfolio):
-    def __init__(self, members_positions_mat, derivatives, exposures):
-        ccp_positions = -np.array(members_positions_mat)
-        super(CCPPortfolio, self).__init__(ccp_positions, derivatives, exposures)
+AbsPortfolio.register(CSAPortfolio)
