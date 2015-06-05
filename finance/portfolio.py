@@ -87,7 +87,7 @@ class CSAPortfolio(AbsPortfolio):
 
         sum_col = mat.sum(axis=0)
         for (i, sum_) in enumerate(sum_col):
-            if sum_ > sys.float_info.epsilon:
+            if sum_ > 1e-15:
                 raise ValueError("The total portfolio composition is not neutral "
                                  "for index = %i, sum=%s" % (i, sum_))
 
