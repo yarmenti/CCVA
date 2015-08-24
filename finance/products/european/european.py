@@ -11,8 +11,8 @@ class EuropeanContract(object):
     __metaclass__ = ABCMeta
 
     def __init__(self, underlying_path, maturity, df_process, underlying_index):
-        if not isinstance(underlying_path, Process):
-            raise ValueError("The underlying must be of type Path")
+        #if not isinstance(underlying_path, Process):
+        #    raise ValueError("The underlying must be of type Path")
 
         if maturity not in underlying_path.time:
             raise ValueError("The Maturity is not in the time grid")

@@ -235,13 +235,16 @@ class CCPRegulatoryCapital2014(CCPRegulatoryCapital2012):
 
     def compute_kcm(self, clearing_member_index, t, risk_horizon=1., conf_level=0.999, **kwargs):
         total_df = self.df_account.total_default_fund().sum() + self.sig.value
-        if total_df <= 0:
-            raise RuntimeError("The total default fund must be > 0")
 
-        df = self.df_account.get_amount(clearing_member_index).sum()
+        if total_df <= 0:
+            # If we are here, it means that the default fund is zero
+            # for everyone and that the SIG is zero.
+            # Thus, the formula leads to zero as capital.
+            return 0.
 
         k_ccp = self.compute_k_ccp(t, risk_horizon, **kwargs)
 
+        df = self.df_account.get_amount(clearing_member_index).sum()
         firt_term = k_ccp * (df/total_df)
         second_term = 0.08*0.02*df
 
