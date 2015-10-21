@@ -21,6 +21,10 @@
 *.pyc
 *.pkl
 
+*.suo
+*.sln
+*.pyproj
+
 # Folders to be ignored: all the checkpoints in any subdir
 .ipynb_checkpoints/
 OUTPUTS/

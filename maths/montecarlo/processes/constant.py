@@ -11,6 +11,9 @@ class ConstantProcess(Process):
     def _time_set(self):
         self.simulate()
 
+    def conditional_expectation(self, t, T):
+        return self(t)
+
     def simulate(self):
         values = np.tile(self._x0, self.time.shape)
         super(ConstantProcess, self.__class__).values.fset(self, values)

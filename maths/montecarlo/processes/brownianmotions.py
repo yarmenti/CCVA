@@ -93,6 +93,36 @@ class BrownianMotion(Process):
         vals = np.cumsum(np.hstack((self._x0, dXt)), 1)
         self.values = vals
 
+    def _current_and_drift_integral(self, t, T):
+        if t > T:
+            return self(T), 0.
+
+        if T not in self.time:
+            raise ValueError("T must be in the time_grid, given: %s.\n Time grid = %s"%(T, self.time))
+
+        current = self(t) # vector
+
+        drift = self.__drifts
+        integral = None
+        if drift.shape[1] == 1:
+            integral = (T-t) * drift
+        else:
+            index_t = np.where(self.time == t)[0][0]
+            index_T = np.where(self.time == T)[0][0]
+            
+            time = self._delta_time[0, index_t:index_T]
+            drift = drift[:, index_t:index_T]
+
+            integral = np.zeros((self.dimension, 1))
+            for i, d in enumerate(drift):
+                integral[i] = np.dot(time, d)
+
+        return current, integral
+
+    def conditional_expectation(self, T, t):
+        current, int = self._current_and_drift_integral(t, T)
+        return current + int
+
     @staticmethod
     def compute_next_value(current, drift, vol, delta_t, gaussian_rv):
         dim = 1 if isinstance(current, float) else current.shape[0]
@@ -108,6 +138,10 @@ Process.register(BrownianMotion)
 
 
 class GeometricBrownianMotion(BrownianMotion):
+    def conditional_expectation(self, T, t):
+        current, int = self._current_and_drift_integral(t, T)
+        return current * np.exp(int)
+
     def simulate(self):
         gauss = np.random.multivariate_normal(np.zeros(self.dimension), self.correl_matrix, self.time.size-1).T
 

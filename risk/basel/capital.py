@@ -239,7 +239,6 @@ class CCPRegulatoryCapital2014(CCPRegulatoryCapital2012):
         if total_df <= 0:
             # If we are here, it means that the default fund is zero
             # for everyone and that the SIG is zero.
-            # Thus, the formula leads to zero as capital.
             return 0.
 
         k_ccp = self.compute_k_ccp(t, risk_horizon, **kwargs)
