@@ -87,7 +87,7 @@ class Process(object):
         return self.__dim
 
     @abstractmethod
-    def conditional_expectation(self, t, T):
+    def conditional_expectation(self, T, t):
         pass
 
     @abstractmethod

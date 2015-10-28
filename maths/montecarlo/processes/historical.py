@@ -27,7 +27,7 @@ class HistoricalProcess(Process):
     def _time_set(self):
         pass
 
-    def conditional_expectation(self, t, T):
+    def conditional_expectation(self, T, t):
         return self(t)
 
     def simulate(self):

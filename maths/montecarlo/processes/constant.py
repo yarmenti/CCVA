@@ -11,7 +11,7 @@ class ConstantProcess(Process):
     def _time_set(self):
         self.simulate()
 
-    def conditional_expectation(self, t, T):
+    def conditional_expectation(self, T, t):
         return self(t)
 
     def simulate(self):
