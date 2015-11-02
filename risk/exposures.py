@@ -1,4 +1,4 @@
-from abc import ABCMeta, abstractmethod
+﻿from abc import ABCMeta, abstractmethod
 
 from scipy.stats import norm
 import numpy as np
@@ -38,7 +38,7 @@ class EuropeanQuantilExposure(object):
         drift = kwargs.get('drift', self.__drift)
         vol = kwargs.get('vol', self.__vol)
 
-        res = np.zeros([2])
+        res = np.empty([2])
         for (i_, a) in enumerate(conf_level):
             tmp = self.__compute_pl_price(t, risk_period, a, drift, vol)
             res[i_] = tmp
@@ -81,6 +81,10 @@ class EuropeanQuantilExposure(object):
     @property
     def discount(self):
         return self.__discount
+    
+    @property
+    def param_names(self):
+        return ("conf_level", "risk_period")
 
 
 class EuropeanQuantileBrownianExposure(EuropeanQuantilExposure):
@@ -91,7 +95,7 @@ class EuropeanQuantileBrownianExposure(EuropeanQuantilExposure):
                 St_ = self.contract.S(t_)
             else:
                 if t_ in self.contract.pillars:
-                    St_ = self.discount(t__)/self.discount(t_) * St_
+                    St_ = self.contract.udl_cond_expect(t_, t__)
                 else:
                     St_ = BrownianMotion.compute_next_value(St_, drift, vol, t_-t__, quantile_inv)
 
@@ -103,15 +107,13 @@ class EuropeanQuantileBrownianExposure(EuropeanQuantilExposure):
 
 class EuropeanQuantileGeomBrownianExposure(EuropeanQuantilExposure):
     def _compute_diff(self, t, pillars, drift, vol, quantile_inv):
-        d = drift - .5*vol**2
-
         process_values = []
         for t_ in pillars:
             if t_ <= t:
                 St_ = self.contract.S(t_)
             else:
                 if t_ in self.contract.pillars:
-                    St_ = self.discount(t__)/self.discount(t_) * St_
+                    St_ = self.contract.udl_cond_expect(t_, t__)
                 else:
                     St_ = GeometricBrownianMotion.compute_next_value(St_, drift, vol, t_-t__, quantile_inv)[0, 0]
 

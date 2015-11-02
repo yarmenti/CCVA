@@ -1,4 +1,4 @@
-import numpy as np
+﻿import numpy as np
 from scipy.stats import norm
 
 
@@ -64,7 +64,7 @@ class CSARegulatoryCapital(object):
         return lgd * (gauss_factor - dp) * coeff
 
     def __compute_effective_mat(self, counterparty_index, t):
-        positions = self.portfolio.counterparties_positions_from_bank[counterparty_index, :]
+        positions = self.portfolio.counterparties_positions_from_self[counterparty_index, :]
         notionals = np.multiply(positions, self.portfolio.notionals)
 
         notional = notionals.sum()
@@ -81,10 +81,10 @@ class CSARegulatoryCapital(object):
         loss = losses.sum()
 
         use_vm = kwargs.pop('use_vm', True)
-        vm = self.__vm_acc.amounts[self.__bank_idx].sum() if use_vm else 0.
+        vm = self.__vm_acc.amounts[counterparty_index].sum() if use_vm else 0.
 
         use_im = kwargs.pop('use_im', True)
-        im = self.__im_acc.amounts[self.__bank_idx].sum() if use_im else 0.
+        im = self.__im_acc.amounts[counterparty_index].sum() if use_im else 0.
 
         ead = np.maximum(loss - vm - im, 0)
 
