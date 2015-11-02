@@ -37,7 +37,7 @@ class SwapContract(EuropeanContract):
         discounts = self.__discounted_pills[1:]
         den = np.dot(self.__delta_pills, discounts)
 
-        cond_expect = cond_expect = lambda x: self.__cdtn_expect(x, 0.)
+        cond_expect = cond_expect = lambda x: self.udl_cond_expect(x, 0.)
         cond_exp = map(cond_expect, self.__pills[:-1])
 
         num = np.multiply(self.__delta_pills, cond_exp)
@@ -63,7 +63,7 @@ class SwapContract(EuropeanContract):
         deltas = self.__delta_pills[next_pymt_idx:]
 
         strike_term = self.__k * np.dot(deltas, self.__discounted_pills[next_pymt_idx + 1:])
-        cond_expect = lambda x: self.__cdtn_expect(x, t)
+        cond_expect = lambda x: self.udl_cond_expect(x, t)
         
         cond_exp = map(cond_expect, self.__pills[next_pymt_idx:-1])
 
@@ -72,7 +72,7 @@ class SwapContract(EuropeanContract):
 
         return (first_coupon + spot_term - strike_term) / df_t
 
-    def __cdtn_expect(self, T, t):
+    def udl_cond_expect(self, T, t):
     	return self.underlying.conditional_expectation(T, t)[self.underlying_index, 0]
 
     def __str__(self):

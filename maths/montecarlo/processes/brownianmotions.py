@@ -1,4 +1,4 @@
-import numpy as np
+﻿import numpy as np
 
 from maths.montecarlo.processes.base import Process
 
@@ -57,8 +57,7 @@ class BrownianMotion(Process):
             self.__correl = [[1]]
             return
 
-        if not isinstance(val, np.ndarray):
-            correl_matrix = np.array(val)
+        correl_matrix = val if isinstance(val, np.ndarray) else np.array(val)
 
         if correl_matrix.ndim != 2:
             raise ValueError("The correl_matrix must be 2-dimensional")

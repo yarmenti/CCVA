@@ -1,4 +1,4 @@
-from abc import abstractmethod, ABCMeta
+﻿from abc import abstractmethod, ABCMeta
 import numpy as np
 import sys
 
@@ -80,112 +80,124 @@ class AbsPortfolio(object):
 
 
 class CSAPortfolio(AbsPortfolio):
-    __directions = [1, -1]
+	__own_positions = None
 
-    def __init__(self, matrix_positions, derivatives_notionals, derivatives, exposures, bank_id):
-        mat = matrix_positions if isinstance(matrix_positions, np.ndarray) else np.array(matrix_positions)
-
-        sum_col = mat.sum(axis=0)
-        for (i, sum_) in enumerate(sum_col):
-            if sum_ > 1e-15:
-                raise ValueError("The total portfolio composition is not neutral "
+	def __init__(self, matrix_positions, derivatives_notionals, derivatives, exposures, bank_id):
+		mat = matrix_positions if isinstance(matrix_positions, np.ndarray) else np.array(matrix_positions)
+		
+		sum_col = mat.sum(axis=0)
+		for (i, sum_) in enumerate(sum_col):
+			if sum_ > 1e-15:
+				raise ValueError("The total portfolio composition is not neutral "
                                  "for index = %i, sum=%s" % (i, sum_))
 
-        self.__bank_id = bank_id
-        self.__own_positions = None
+		self.__bank_id = bank_id
+		
+		self.__exposures_dict = {}
+		self.__port_dict = {}
+				
+		super(CSAPortfolio, self).__init__(matrix_positions, derivatives_notionals, derivatives, exposures)
 
-        super(CSAPortfolio, self).__init__(matrix_positions, derivatives_notionals, derivatives, exposures)
+		self._compute_positions_matrix()
+		
+	def _compute_positions_matrix(self):
+		positions = self.positions
+		try:
+			mod_positions = np.divide(positions, -positions[self.__bank_id])
+		except RuntimeWarning:
+			zero_position_indexes = np.where(positions[self.__bank_id] == 0)
+			mod_positions[:, zero_position_indexes] = 0.
+			
+		self.__own_positions = mod_positions
+		
+	@property
+	def counterparties_positions_from_self(self):
+		return np.array(self.__own_positions, copy=True)
+		
+	def _get_weights(self, **kwargs):
+		_from = kwargs["from_"]
+		_towards = kwargs["towards_"]
+		
+		if _towards == _from:
+			if _towards == self.__bank_id:
+				return np.zeros((1, self.derivatives_number))
+			raise ValueError("Can't have same from_ and towards_ keyword args")
+			
+		if _from == self.__bank_id:
+			multiplier = 1.
+		else:
+			if _towards != self.__bank_id:
+				raise ValueError("Neither from_ nor towards_ is equal to bank_id")
+			multiplier = -1.
+			_towards = _from
+			
+		weights = multiplier * np.array(self.__own_positions, copy=True)[_towards]
+		
+		return weights
+		
+	def compute_value(self, t, **kwargs):
+		if t not in self.__port_dict:
+			pricer = lambda prod: prod.price(t)
+			self.__port_dict[t] = np.array(map(pricer, self.derivatives))
+				
+		prices = self.__port_dict[t]
+		prices_by_not = np.multiply(self.notionals, prices)
+		
+		weights = self._get_weights(**kwargs)
+		return np.multiply(weights, prices_by_not)
+		
+	def compute_exposure(self, t, **kwargs):
+		params = self.exposures[0].param_names
+		key = (t, tuple([kwargs[p] for p in params]))
+		if key not in self.__exposures_dict:
+			exposure_pricer = lambda expos_obj: expos_obj(t=t, **kwargs)
+			self.__exposures_dict[key] = np.array(map(exposure_pricer, self.exposures))
+				
+		exposures = self.__exposures_dict[key]
+		weights = self._get_weights(**kwargs)
+		
+		not_by_weights = np.multiply(weights, self.notionals)
+		not_by_weights = not_by_weights.reshape((self.derivatives_number, 1))
 
-    def _compute_positions_matrix(self, pov_index):
-        if self.__own_positions is None:
-            positions = self.positions
-            try:
-                mod_positions = np.divide(positions, -positions[self.__bank_id])
-            except RuntimeWarning:
-                zero_position_indexes = np.where(positions[self.__bank_id] == 0)
-                mod_positions[:, zero_position_indexes] = 0.
+		results = np.multiply(exposures, not_by_weights)
+		res = np.amax(results, axis=1)
 
-            self.__own_positions = mod_positions
+		return res
+	
+	def delete_cache(self):
+		self.__port_dict.clear()
+		self.__exposures_dict.clear()
 
-        res = np.array(self.__own_positions, copy=True)
-        if pov_index != self.__bank_id:
-            res = -res
-
-        return res
-
-    @property
-    def counterparties_positions_from_bank(self):
-        return np.array(self.__own_positions, copy=True)
-
-    def _project_result(self, result, **kwargs):
-        from_ = kwargs["from_"]
-        towards_ = kwargs.get("towards_", None)
-
-        # Computation of losses towards everyone
-        if towards_ is None:
-            if from_ != self.__bank_id:
-                raise ValueError("Must provide towards keyword.")
-            return result
-
-        # Handle the point of view
-        # If different of the bank_id, must take the
-        # values at from_'s point of view.
-        #
-        # In that case, we already multiplied the positions
-        # of all members by -1 in the _compute_positions_matrix method
-        if from_ != self.__bank_id:
-            if towards_ != self.__bank_id:
-                raise ValueError("The point of view has not been set")
-            towards_ = kwargs["from_"]
-
-        return result[towards_]
-
-    def compute_value(self, t, **kwargs):
-        prices = np.array([d.price(t) for d in self.derivatives])
-
-        pov_index = kwargs.get("from_", None)
-        mod_positions = self._compute_positions_matrix(pov_index)
-
-        #. by notional
-        mod_positions = np.multiply(mod_positions, self.notionals)
-
-        #. by prices
-        result = np.multiply(mod_positions, prices)
-
-        result = self._project_result(result, **kwargs)
-
-        return result
-
-    def compute_exposure(self, t, **kwargs):
-        pov_index = kwargs.get("from_", None)
-        mod_positions = self._compute_positions_matrix(pov_index)
-
-        exposures = np.zeros(self.positions.shape)
-        for (ii, e) in enumerate(self.exposures):
-            exposure = e(t=t, **kwargs)
-            for d, exp in zip(self.__directions, exposure):
-                temp = np.sign(mod_positions[:, ii]) == d
-                exposures[temp, ii] = np.maximum(mod_positions[temp, ii] * exp, 0)
-
-        exposures = np.multiply(exposures, self.notionals)
-
-        exposures = self._project_result(exposures, **kwargs)
-
-        return exposures
+	@property
+	def own_index(self):
+		return self.__bank_id
 
 
 class CCPPortfolio(CSAPortfolio):
     def __init__(self, matrix_positions, derivatives_notionals, derivatives, exposures):
-        mat = matrix_positions if isinstance(matrix_positions, np.ndarray) else np.array(matrix_positions)
-        super(CCPPortfolio, self).__init__(-mat, derivatives_notionals, derivatives, exposures, None)
+        ccp_pos = -(matrix_positions if isinstance(matrix_positions, np.ndarray) else np.array(matrix_positions))
+        super(CCPPortfolio, self).__init__(ccp_pos, derivatives_notionals, derivatives, exposures, -1)
 
-    def _compute_positions_matrix(self, pov_index):
-        return self.positions
+    def _compute_positions_matrix(self):
+        pass
 
-    def _project_result(self, result, **kwargs):
-        if "towards_" in kwargs:
-            result = result[kwargs["towards_"]]
+    def _get_weights(self, **kwargs):
+        _from = kwargs.get("from_", self.own_index)
+        _towards = kwargs.get("towards_", self.own_index)
 
-        return result
+        if _towards == _from:
+            raise ValueError("Can't have same from_ and towards_ keyword args")
+
+        if _from == self.own_index:
+            multiplier = 1.
+        else:
+            if _towards != self.own_index:
+                raise ValueError("Neither from_ nor towards_ is equal to bank_id")
+            multiplier = -1.
+            _towards = _from
+
+        weights = multiplier * self.positions[_towards]
+        return weights
+
 
 AbsPortfolio.register(CSAPortfolio)
