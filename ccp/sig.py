@@ -1,4 +1,4 @@
-from __builtin__ import property
+﻿from __builtin__ import property
 import numpy as np
 
 
@@ -36,13 +36,8 @@ class SkinInTheGame(object):
         self.__ratio = ratio
 
     def update_value(self, t, **kwargs):
-        regul_capital = kwargs.pop("regul_capital")
-        risk_horizon = kwargs.pop("risk_horizon", -1)
-
-        if "losses" not in kwargs:
-            raise ValueError("The losses must be present if the risk horizon or conf_level are not.")
-
-        self.__val = regul_capital.compute_k_ccp(t, risk_horizon, **kwargs) * self.__ratio
+        regul_capital = kwargs.pop("regul_capital")        
+        self.__val = regul_capital.compute_k_ccp(t, **kwargs) * self.__ratio
 
     def handle_breach(self, breach):
         jump = -np.minimum(breach, self.__val)

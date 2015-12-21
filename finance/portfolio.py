@@ -137,7 +137,7 @@ class CSAPortfolio(AbsPortfolio):
 		
 	def compute_value(self, t, **kwargs):
 		if t not in self.__port_dict:
-			pricer = lambda prod: prod.price(t)
+			pricer = lambda prod: prod.price(t, **kwargs)
 			self.__port_dict[t] = np.array(map(pricer, self.derivatives))
 				
 		prices = self.__port_dict[t]

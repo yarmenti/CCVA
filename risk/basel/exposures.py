@@ -1,25 +1,8 @@
-from abc import ABCMeta, abstractmethod
+﻿import numpy as np
 from finance.products.european.european import ContractType
 
-import numpy as np
 
-
-class BaselExposure(object):
-    __metaclass__ = ABCMeta
-
-    def __init__(self, european_contract):
-        self.__contract = european_contract
-
-    @property
-    def contract(self):
-        return self.__contract
-
-    @abstractmethod
-    def __call__(self, **kwargs):
-        pass
-
-
-class SABaselExposure(BaselExposure):
+class SABaselExposure(object):
     __low = 0
     __middle = 1
     __high = 2
@@ -59,4 +42,40 @@ class SABaselExposure(BaselExposure):
 
         return res
 
-BaselExposure.register(SABaselExposure)
+
+class BaselExposureAtDefault(object):
+    def __init__(self, portfolio, eee_func_array):
+        self.__port = portfolio
+        self.__eee = eee_func_array
+
+    @property
+    def portfolio(self):
+        return self.__port
+    
+    def __call__(self, **kwargs):
+        t = kwargs['t']
+        epsilon = kwargs.pop('epsilon')
+        positions = kwargs.pop('positions', self.__port.positions)
+
+        notionals = self.__port.notionals
+
+        res = np.empty(positions.shape)
+        for i, (d, eee) in enumerate(zip(self.__port.derivatives, self.__eee)):
+            mat = d.maturity
+            time_discr = np.arange(t + epsilon, 
+                                      np.minimum(t+1 + epsilon, mat) + epsilon, 
+                                      epsilon)
+
+            previous = np.zeros(positions.shape[0])
+            sum = np.zeros(positions.shape[0])
+            pos = positions[:, i].reshape((len(positions[:, i]), 1))
+            for t_i in time_discr:
+                current = eee(t_i, pos, **kwargs).flatten()
+                current = np.maximum(previous, current)
+
+                sum += current
+                previous = current
+
+            res[:, i] = 1.4 * epsilon * sum * notionals[i]
+
+        return res

@@ -7,7 +7,7 @@ from maths.montecarlo.processes.brownianmotions import BrownianMotion, Geometric
 from maths.montecarlo.processes.historical import HistoricalProcess
 
 
-class EuropeanQuantilExposure(object):
+class EuropeanAbsExposure(object):
     __metaclass__ = ABCMeta
 
     def __init__(self, european_contract, df, drift, vol):
@@ -24,12 +24,11 @@ class EuropeanQuantilExposure(object):
         self.__drift = drift
 
         self.__contract = european_contract
-        self.__discount = df
 
     def __call__(self, **kwargs):
         t = kwargs['t']
         risk_period = kwargs['risk_period']
-        if t+risk_period > self.__contract.maturity:
+        if t + risk_period > self.__contract.maturity:
             risk_period = self.__contract.maturity - t
 
         alpha = kwargs['conf_level']
@@ -46,8 +45,8 @@ class EuropeanQuantilExposure(object):
         return res
 
     def __compute_pl_price(self, t, risk_period, alpha, drift, vol):
-        t_ph = t+risk_period
-        quantile_inv = norm.ppf(alpha)
+        t_ph = t + risk_period
+        quantile_inv = self.compute_quantile(alpha)
 
         lst_pill_idx = np.searchsorted(self.__contract.pillars, t_ph)
         pillars = np.unique(np.append(self.__contract.pillars[:lst_pill_idx], [t, t_ph]))
@@ -71,6 +70,11 @@ class EuropeanQuantilExposure(object):
         return result
 
     @abstractmethod
+    def compute_quantile(self, alpha):
+        #return norm.ppf(alpha)
+        pass
+
+    @abstractmethod
     def _compute_diff(self, t, pillars, drift, vol, quantile_inv):
         pass
 
@@ -87,7 +91,17 @@ class EuropeanQuantilExposure(object):
         return ("conf_level", "risk_period")
 
 
-class EuropeanQuantileBrownianExposure(EuropeanQuantilExposure):
+class EuropeanVaRExposure(EuropeanAbsExposure):
+    def compute_quantile(self, alpha):
+        return norm.ppf(alpha)
+
+        
+class EuropeanESExposure(EuropeanAbsExposure):
+    def compute_quantile(self, alpha):
+        return norm.pdf(norm.ppf(alpha)) / alpha
+
+
+class EuropeanBrownianExposure(EuropeanAbsExposure):
     def _compute_diff(self, t, pillars, drift, vol, quantile_inv):
         process_values = []
         for t_ in pillars:
@@ -105,7 +119,7 @@ class EuropeanQuantileBrownianExposure(EuropeanQuantilExposure):
         return process_values
 
 
-class EuropeanQuantileGeomBrownianExposure(EuropeanQuantilExposure):
+class EuropeanGeomBrownianExposure(EuropeanAbsExposure):
     def _compute_diff(self, t, pillars, drift, vol, quantile_inv):
         process_values = []
         for t_ in pillars:
@@ -123,5 +137,8 @@ class EuropeanQuantileGeomBrownianExposure(EuropeanQuantilExposure):
         return process_values
 
 
-EuropeanQuantilExposure.register(EuropeanQuantileBrownianExposure)
-EuropeanQuantilExposure.register(EuropeanQuantileGeomBrownianExposure)
+class EuropeanVaRGeomBrownianExposure(EuropeanGeomBrownianExposure, EuropeanVaRExposure):
+    pass
+
+
+EuropeanAbsExposure.register(EuropeanVaRGeomBrownianExposure)
