@@ -56,15 +56,21 @@ class BaselExposureAtDefault(object):
         t = kwargs['t']
         epsilon = kwargs.pop('epsilon')
         positions = kwargs.pop('positions', self.__port.positions)
+        ttm = kwargs.pop("ttm", 1.)
 
         notionals = self.__port.notionals
 
         res = np.empty(positions.shape)
         for i, (d, eee) in enumerate(zip(self.__port.derivatives, self.__eee)):
             mat = d.maturity
-            time_discr = np.arange(t + epsilon, 
-                                      np.minimum(t+1 + epsilon, mat) + epsilon, 
-                                      epsilon)
+            time_discr = np.arange(t + epsilon,
+                                   np.minimum( t + ttm + epsilon, mat) + epsilon, 
+                                   epsilon)
+
+            if len(time_discr) == 1:
+                time_discr = np.arange(t + 0.5*epsilon,
+                                   np.minimum( t + ttm + 0.5*epsilon, mat) + 0.5*epsilon, 
+                                   0.5*epsilon)
 
             previous = np.zeros(positions.shape[0])
             sum = np.zeros(positions.shape[0])
