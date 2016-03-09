@@ -37,7 +37,7 @@ class CSARegulatoryCapital(object):
     def __init__(self, ead_handler, states, df_prob_models, recoveries, cap_ratio=0.08):
         if not isinstance(ead_handler.portfolio, CSAPortfolio):
             raise ValueError("The EAD portfolio is not a CSAPortfolio")
-        
+
         self.__ead = ead_handler
         self.__states = states
         self.__default_probs = df_prob_models
@@ -103,7 +103,7 @@ class CSARegulatoryCapital(object):
         return lgd * (gauss_factor - dp) * coeff
 
     def compute_rwa(self, cp_index, t, **kwargs):
-        tmp = 12.5 * self.compute_k(cp_index, t) 
+        tmp = 12.5 * self.compute_k(cp_index, t)
         tmp *= self.compute_eads(cp_index, t, **kwargs)
         return tmp
 
@@ -148,7 +148,7 @@ class CCPRegulatoryCapital2014(object):
     def __init__(self, ead_handler, df_account, sig, cap_ratio=0.08, risk_weight=0.2):
         if not isinstance(ead_handler.portfolio, CCPPortfolio):
             raise ValueError("The EAD portfolio is not a CCPPortfolio")
-        
+
         self.__ead = ead_handler
         self.__df_account = df_account
         self.__sig = sig
@@ -171,6 +171,8 @@ class CCPRegulatoryCapital2014(object):
     def compute_eads(self, t, **kwargs):
         kwargs2 = kwargs.copy()
         kwargs2['t'] = t
+        kwargs2['positions'] = -self.portfolio.positions
+
         return self.__ead(**kwargs2)
 
     def compute_k_ccp(self, t, **kwargs):
