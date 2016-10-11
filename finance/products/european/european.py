@@ -57,7 +57,7 @@ class EuropeanContract(object):
     @property
     def maturity(self):
         return self.__mat
-    
+
     @property
     def discount_factor(self):
         return self.__df
